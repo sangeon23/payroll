@@ -324,6 +324,24 @@ table.fit tbody tr:hover td{background:#eef4ff}
 .lock-banner .lk{font-size:15px;line-height:1}
 .page-locked input:disabled,.page-locked select:disabled{background:transparent!important;color:var(--ink)!important;-webkit-text-fill-color:var(--ink);cursor:default;opacity:1;border-color:transparent!important;box-shadow:none!important}
 .page-locked [data-lockable]:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+
+/* 4대보험 고지 표 가독성 */
+.ins-tbl th.grp-w{background:#e7f4ec!important;color:#0a6b3d}
+.ins-tbl th.grp-t{background:#e4eefb!important;color:#26518c}
+.ins-tbl th.grp-c{background:#eef0f3!important;color:#5a6270}
+.ins-tbl td.col-w{background:#f5fbf7}
+.ins-tbl td.col-t{background:#f6f9fe}
+.ins-tbl td.col-c{background:#f7f8fa}
+.ins-tbl tbody tr:hover td{background:#eaf2ff}
+.ins-tbl tfoot .sum td.col-w{background:#dff0e6!important}
+.ins-tbl tfoot .sum td.col-t{background:#e0eafb!important}
+.ins-tbl tfoot .sum td.col-c{background:#e7e9ee!important}
+.ins-worker{display:block;font-size:10px;color:#26518c;font-weight:600;margin-top:2px;letter-spacing:-.2px}
+.ins-full{display:block;font-size:10px;color:#8a919d;font-weight:600;margin-top:2px}
+.ins-na{color:#c3c8d1;font-weight:400;font-size:11px}
+.ins-legend{display:flex;flex-wrap:wrap;gap:16px 22px;padding:13px 18px;font-size:11.5px;color:var(--ink2);border-top:1px solid var(--line2);line-height:1.4}
+.ins-legend .it{display:flex;align-items:center;gap:6px}
+.ins-legend .sw{width:12px;height:12px;border-radius:3px;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -1602,49 +1620,65 @@ window.applyDedForward = async function(){
 window.renderIns = function(el){
   const md=A2.state.monthData; const emps=A2.state.employees;
   const gIn={}, gTot={}, gWorker={}; A2.INS_KEYS.forEach(k=>{gIn[k]=0;gTot[k]=0;gWorker[k]=0;}); let gInAll=0, gTotAll=0;
+  // 열 그룹: w=근로자분 입력(건강·장기요양), t=총액 입력(국민연금·고용), c=회사부담(산재)
+  const INS_GRP={health:'w',care:'w',pension:'t',emp:'t',injury:'c'};
+  const grpStart=k=>(k==='pension'||k==='injury')?' grp-start':'';
   el.innerHTML=`
   <div class="card">
     <div class="card-h"><div><h3>${monthLabel(A2.state.month)} 4대보험 실제 고지액</h3>
-      <div class="desc">공단 고지서에 적힌 금액 그대로 입력하세요 · 건강·장기요양은 고지서가 <b>근로자분(50%)</b>만 표기 · 국민연금·고용·산재는 <b>100% 총액</b> 표기 · 맨 아래 <b>직원 합계</b>(근로자 부담)와 <b>회사 합계</b>(회사부담 포함 100%)로 구분됩니다</div></div>
+      <div class="desc">공단 고지서 금액을 그대로 입력하세요 · 색으로 <b style="color:#0a6b3d">근로자분 입력</b> / <b style="color:#26518c">총액 입력</b> / <span style="color:#5a6270">회사부담</span> 을 구분했습니다</div></div>
       <div style="display:flex;gap:8px;align-items:center">${window.lockBtn('ins')}<button class="btn primary" onclick="openInsBulkModal()">📋 여러 달에 일괄 적용</button></div></div>
-    <div class="card-b flush"><div class="tbl-wrap"><table class="fit">
-      <thead><tr><th class="c">순번</th><th class="l">성명</th>
-        ${A2.INS_KEYS.map(k=>{
-          const cfg=A2.INS_CONFIG[k];
-          const tag = cfg.input==='half'?'50% 표기': (k==='injury'?'회사부담':'100% 표기');
-          const note = `<span style="font-weight:400;font-size:10px;color:#888"><br>${tag}</span>`;
-          return `<th>${A2.INS_LABEL[k]}${note}</th>`;
-        }).join('')}<th class="sumcol">입력 합계</th></tr></thead>
+    <div class="card-b flush"><div class="tbl-wrap"><table class="fit ins-tbl">
+      <thead>
+        <tr>
+          <th class="c" rowspan="2">순번</th><th class="l" rowspan="2">성명</th>
+          <th class="grp-w grp-start" colspan="2">근로자분 입력 <span style="font-weight:500;font-size:10px">· 고지서 그대로</span></th>
+          <th class="grp-t grp-start" colspan="2">총액 입력 <span style="font-weight:500;font-size:10px">· 100%</span></th>
+          <th class="grp-c grp-start" colspan="1">회사부담</th>
+          <th class="sumcol" rowspan="2">입력<br>합계</th>
+        </tr>
+        <tr>
+          <th class="grp-w grp-start">건강보험</th><th class="grp-w">장기요양</th>
+          <th class="grp-t grp-start">국민연금</th><th class="grp-t">고용보험</th>
+          <th class="grp-c grp-start">산재보험</th>
+        </tr>
+      </thead>
       <tbody>
       ${emps.map((e,i)=>{
         const ins=md.insurance[e.id]||{}; let sub=0;
         const cells=A2.INS_KEYS.map((k,ci)=>{
+          const g=INS_GRP[k], st=grpStart(k);
           const enrolled = k==='injury' ? true : e['ins_'+k];
-          if(!enrolled) return `<td class="zero c">미가입</td>`;
+          if(!enrolled) return `<td class="col-${g} c${st}"><span class="ins-na">미가입</span></td>`;
           const v=num(ins[k]); sub+=v;
           gIn[k]+=v; gTot[k]+=A2.insTotalAmount(k,v);
           const workerShare = (k==='emp' && e.empFull) ? 0 : A2.insWorkerShare(k,v);
           gWorker[k]+=workerShare;
-          // 100% 표기 항목은 () 안에 직원부담 표시: 국민연금=고지×50%, 고용보험=고지×0.9/2.05
+          // 총액 입력 항목엔 자동 계산된 근로자 부담을 아래 줄에 표시
           let note='';
           if(A2.INS_CONFIG[k] && A2.INS_CONFIG[k].input==='full' && k!=='injury'){
-            if(k==='emp' && e.empFull){ note=`<div class="wnote">회사전액</div>`; }
-            else { note=`<div class="wnote">직원 ${won(A2.insWorkerShare(k, v))}</div>`; }
+            if(k==='emp' && e.empFull){ note=`<div class="wnote ins-full">회사전액</div>`; }
+            else { note=`<div class="wnote ins-worker">근로자 ${won(A2.insWorkerShare(k, v))}</div>`; }
           }
-          return `<td class="edit"><input value="${wonInput(ins[k])}" data-emp="${e.id}" data-ins="${k}" data-row="${i}" data-col="${ci}" inputmode="numeric">${note}</td>`;
+          return `<td class="edit col-${g}${st}"><input value="${wonInput(ins[k])}" data-emp="${e.id}" data-ins="${k}" data-row="${i}" data-col="${ci}" inputmode="numeric">${note}</td>`;
         }).join(''); gInAll+=sub;
         return `<tr><td class="c muted">${i+1}</td><td class="name l">${esc(e.name)||'-'}</td>${cells}<td class="sumcol"><b>${won(sub)}</b></td></tr>`;
-      }).join('')||`<tr><td colspan="9"><div class="empty"><p>직원을 먼저 등록하세요.</p></div></td></tr>`}
+      }).join('')||`<tr><td colspan="8"><div class="empty"><p>직원을 먼저 등록하세요.</p></div></td></tr>`}
       </tbody>
       <tfoot>
-        <tr class="sum"><td colspan="2" class="l">직원 합계 <span style="font-weight:400;font-size:10px;color:#888">(근로자 부담)</span></td>
-          ${A2.INS_KEYS.map(k=>`<td>${won(gWorker[k])}</td>`).join('')}
+        <tr class="sum"><td colspan="2" class="l">직원 합계 <span style="font-weight:600;font-size:10px;color:#0a6b3d">근로자 부담</span></td>
+          ${A2.INS_KEYS.map(k=>`<td class="col-${INS_GRP[k]}${grpStart(k)}">${won(gWorker[k])}</td>`).join('')}
           <td class="sumcol">${won(A2.INS_KEYS.reduce((s,k)=>s+gWorker[k],0))}</td></tr>
-        <tr class="sum" style="background:#e8f1ff"><td colspan="2" class="l">회사 합계 <span style="font-weight:400;font-size:10px;color:#555">(회사부담 포함 100%)</span></td>
-          ${A2.INS_KEYS.map(k=>{gTotAll+=gTot[k]; return `<td>${won(gTot[k])}</td>`;}).join('')}
+        <tr class="sum" style="background:#eaf0fb"><td colspan="2" class="l">회사 합계 <span style="font-weight:400;font-size:10px;color:#555">회사부담 포함 100%</span></td>
+          ${A2.INS_KEYS.map(k=>{gTotAll+=gTot[k]; return `<td class="${grpStart(k).trim()}">${won(gTot[k])}</td>`;}).join('')}
           <td class="sumcol"><b>${won(gTotAll)}</b></td></tr>
       </tfoot>
-    </table></div></div>
+    </table></div>
+    <div class="ins-legend">
+      <span class="it"><span class="sw" style="background:#0a8a4f"></span><b>근로자분 입력</b> — 고지서의 근로자분(50%) 그대로</span>
+      <span class="it"><span class="sw" style="background:#2b6ef2"></span><b>총액 입력</b> — 100% 금액 입력 · 밑의 <b style="color:#26518c">근로자</b>는 자동 계산된 직원 부담</span>
+      <span class="it"><span class="sw" style="background:#8a919d"></span><b>회사부담</b> — 산재는 회사가 전액 부담</span>
+    </div></div>
   </div>`;
   const insInputs=[...el.querySelectorAll('td.edit input')];
   insInputs.forEach(inp=>{
@@ -1688,7 +1722,7 @@ function updateInsTotals(el){
           if(inp){ const note=inp.parentElement.querySelector('.wnote');
             if(note){
               if(k==='emp' && e.empFull) note.textContent='회사전액';
-              else note.textContent='직원 '+won(A2.insWorkerShare(k, num(ins[k])));
+              else note.textContent='근로자 '+won(A2.insWorkerShare(k, num(ins[k])));
             }
           }
         }
