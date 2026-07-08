@@ -1,0 +1,2107 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>이지산업 급여관리</title>
+<link rel="stylesheet" href="https://fastly.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/pretendardvariable.css">
+<style>
+:root{
+  --ink:#14171d; --ink2:#525a66; --line:#e6e8ee; --line2:#f0f2f6;
+  --divider:#d3d8e0;
+  --bg:#f4f6f9; --card:#ffffff; --accent:#2b6ef2; --accent-soft:#eaf1fe;
+  --accent-line:#c3d8fc;
+  --green:#0a8a4f; --green-soft:#e8f5ee; --red:#d23b34; --red-soft:#fdecea;
+  --amber:#bd7400; --amber-soft:#fbf2e1; --gray:#8a919d;
+  --head:#f6f8fb; --zebra:#f3f6fb; --radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic","맑은 고딕",sans-serif;
+  background:var(--bg);color:var(--ink);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+button{font-family:inherit;cursor:pointer}
+input,select{font-family:inherit;font-size:13px}
+
+/* Layout */
+.app{display:flex;min-height:100vh}
+.side{width:214px;background:#fbfbfd;color:var(--ink2);flex-shrink:0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;border-right:1px solid var(--line)}
+.side .brand{padding:20px 18px 16px;border-bottom:1px solid var(--line2)}
+.side .brand h1{font-size:15.5px;color:var(--ink);font-weight:800;letter-spacing:-.3px}
+.side .brand span{font-size:10px;color:var(--gray);display:block;margin-top:3px;letter-spacing:1.5px;font-weight:600}
+.side nav{padding:10px 8px;flex:1;overflow-y:auto}
+.side nav button{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:none;border:none;
+  color:var(--ink2);padding:9px 12px;border-radius:8px;font-size:13px;font-weight:500;margin-bottom:2px;transition:.12s}
+.side nav button:hover{background:#eef1f5;color:var(--ink)}
+.side nav button.active{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.side nav button .ic{width:16px;text-align:center;font-size:14px;opacity:.85}
+.side .foot{padding:12px 16px;border-top:1px solid var(--line2);font-size:11px;color:var(--gray)}
+.side .sync{display:flex;align-items:center;gap:6px}
+.dot{width:7px;height:7px;border-radius:50%;background:#3fb950;flex-shrink:0}
+.dot.off{background:#f85149}
+
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{background:var(--card);border-bottom:1px solid var(--line);padding:14px 24px;
+  display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20}
+.topbar h2{font-size:18px;font-weight:800;letter-spacing:-.4px}
+.topbar .sub{font-size:12px;color:var(--gray);margin-top:1px}
+.topbar .right{display:flex;align-items:center;gap:10px}
+.monthsel{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--line);
+  border-radius:8px;padding:5px 8px}
+.cotabs{display:flex;gap:3px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:3px}
+.cotab{border:none;background:none;padding:6px 14px;border-radius:7px;font-size:12.5px;font-weight:700;color:var(--ink2);transition:.12s;white-space:nowrap}
+.cotab:hover{color:var(--ink);background:#e9edf2}
+.cotab.active{background:var(--card);color:var(--accent);box-shadow:0 1px 2px rgba(20,23,29,.12);font-weight:800}
+.monthsel button{background:none;border:none;font-size:15px;color:var(--ink2);padding:0 5px;line-height:1}
+.monthsel .m{font-weight:700;font-size:14px;min-width:74px;text-align:center}
+.content{padding:22px 24px;flex:1}
+
+/* Buttons */
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:7px 13px;
+  border-radius:7px;font-size:12.5px;font-weight:600;transition:.12s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--bg);border-color:#ccd2d9}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:#1a5fd0}
+.btn.green{background:var(--green);border-color:var(--green);color:#fff}
+.btn.green:hover{filter:brightness(.94)}
+.btn.ghost{background:none;border:none;color:var(--accent)}
+.btn.ghost:hover{background:var(--accent-soft)}
+.btn.sm{padding:4px 9px;font-size:11.5px}
+.btn.danger{color:var(--red);border-color:var(--line)}
+.btn.danger:hover{background:var(--red-soft);border-color:#f3c2bd}
+
+/* Cards */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:16px;overflow:hidden;box-shadow:0 1px 2px rgba(20,23,29,.03)}
+.card-h{padding:14px 18px;border-bottom:1px solid var(--line2);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.card-h h3{font-size:14px;font-weight:800;letter-spacing:-.2px}
+.card-h .desc{font-size:11.5px;color:var(--gray);margin-top:2px}
+.card-b{padding:18px}
+.card-b.flush{padding:0}
+
+/* Stat cards */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:13px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 17px;position:relative;box-shadow:0 1px 2px rgba(20,23,29,.03)}
+.stat::before{content:"";position:absolute;left:17px;top:0;width:26px;height:3px;border-radius:0 0 3px 3px;background:var(--gray)}
+.stat .lbl{font-size:11.5px;color:var(--ink2);font-weight:600;letter-spacing:.1px}
+.stat .val{font-size:23px;font-weight:800;letter-spacing:-.6px;margin-top:7px;color:var(--ink)}
+.stat .val.sm{font-size:18px}
+.stat .foot{font-size:11px;color:var(--gray);margin-top:5px}
+.stat.accent::before{background:var(--accent)}
+.stat.green::before{background:var(--green)}
+.stat.green .val{color:var(--green)}
+.stat.red::before{background:var(--red)}
+.stat.red .val{color:var(--red)}
+.stat.amber::before{background:var(--amber)}
+.stat.amber .val{color:var(--amber)}
+
+/* Tables */
+.tbl-wrap{overflow-x:auto;border-radius:8px}
+table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+th,td{padding:6px 12px;text-align:right;border-bottom:1px solid var(--line2);border-right:1px solid var(--divider);white-space:nowrap}
+th:last-child,td:last-child{border-right:none}
+th{background:var(--head);font-weight:700;color:var(--ink2);font-size:11.5px;letter-spacing:.2px;position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line);border-right:1px solid var(--divider);text-align:center}
+th:last-child{border-right:none}
+td.l{text-align:left}
+th.c,td.c{text-align:center}
+tbody tr:nth-child(even){background:var(--zebra)}
+tbody tr:hover{background:var(--accent-soft)}
+tr.sum{font-weight:800;background:#e7edf6}
+tr.sum td{border-top:1.5px solid var(--divider);border-bottom:none;background:#e7edf6}
+td.name{font-weight:700;color:var(--ink)}
+td.muted{color:var(--gray)}
+/* 넓은 표: 숫자는 한 줄 유지, 컨테이너 폭에 맞게 자동 축소(fitTables) */
+table.fit{width:max-content;font-size:12px}
+table.fit th,table.fit td{padding:6px 9px;white-space:nowrap}
+table.fit tbody td{font-weight:500;color:var(--ink)}
+table.fit td.muted,table.fit td.zero{font-weight:400;color:var(--gray)}
+table.fit th{position:static;top:auto}
+table.fit td.edit input{width:66px;font-size:12px;padding:2px 4px}
+table.fit .tag{padding:1px 6px;font-size:10px}
+table.fit .wnote{line-height:1.05;margin-top:1px}
+.tag{display:inline-block;padding:1.5px 8px;border-radius:20px;font-size:10.5px;font-weight:700}
+.tag.fixed{background:#eef0f3;color:#5a6270}
+.tag.var{background:var(--accent-soft);color:var(--accent)}
+.pos{color:var(--green);font-weight:700}
+.neg{color:var(--red);font-weight:700}
+.zero{color:var(--gray)}
+
+/* Editable cells */
+td.edit input{width:100%;border:1px solid transparent;background:none;text-align:right;padding:2px 6px;border-radius:5px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+td.edit input:hover{border-color:var(--line)}
+td.edit input:focus{border-color:var(--accent);background:#fff;outline:none;box-shadow:0 0 0 2px var(--accent-soft)}
+
+/* Forms */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+.fld label{display:block;font-size:11.5px;font-weight:600;color:var(--ink2);margin-bottom:5px}
+.fld input,.fld select{width:100%;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:#fff}
+.fld input:focus,.fld select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-soft)}
+.fld .hint{font-size:10.5px;color:var(--gray);margin-top:4px}
+.fld input:disabled{background:var(--bg);color:var(--gray)}
+.checkrow{display:flex;align-items:center;gap:7px;padding:7px 0}
+.checkrow input{width:16px;height:16px;accent-color:var(--accent)}
+.checkrow label{margin:0;font-size:13px;cursor:pointer}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(18,22,28,.5);display:none;align-items:flex-start;
+  justify-content:center;z-index:100;overflow-y:auto;padding:40px 20px}
+.modal-bg.show{display:flex}
+.modal{background:#fff;border-radius:14px;width:100%;max-width:640px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal-h{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.modal-h h3{font-size:16px;font-weight:700}
+.modal-h .x{background:none;border:none;font-size:22px;color:var(--gray);line-height:1;padding:0 4px}
+.modal-b{padding:22px}
+.modal-f{padding:14px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:9px;background:var(--bg);border-radius:0 0 14px 14px}
+.sec-title{font-size:12px;font-weight:800;color:var(--ink2);text-transform:uppercase;letter-spacing:.4px;
+  margin:20px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line2)}
+.sec-title:first-child{margin-top:0}
+
+/* Empty */
+.empty{text-align:center;padding:50px 20px;color:var(--gray)}
+.empty .big{font-size:34px;margin-bottom:10px;opacity:.5}
+.empty p{font-size:13px;margin-bottom:14px}
+
+/* Attendance grid */
+.att-wrap{overflow-x:auto}
+.att-tbl{font-size:11.5px}
+.att-tbl th,.att-tbl td{padding:5px 4px;min-width:30px;border-right:1px solid var(--divider);border-bottom:1px solid var(--divider)}
+.att-tbl th:last-child,.att-tbl td:last-child{border-right:none}
+/* 헤더(날짜 줄) 명확히 구분 */
+.att-tbl thead th{background:#eef1f6;color:var(--ink);font-weight:800;border-bottom:2.5px solid #9aa3b2;box-shadow:inset 0 -1px 0 #9aa3b2}
+.att-tbl thead th.wend{background:#f6e6e6}
+.att-tbl thead .dow{color:var(--ink2);font-weight:600}
+.att-tbl td.dcell input{width:30px;text-align:center;border:1px solid transparent;padding:3px 1px;border-radius:4px}
+.att-tbl td.dcell input:hover{border-color:var(--line)}
+.att-tbl td.dcell input:focus{border-color:var(--accent);outline:none;background:var(--accent-soft)}
+.att-tbl .wend{background:#fbf4f4}
+.att-tbl tbody td{border-bottom:1px solid #b9c0cc}
+.att-tbl .rowlbl{text-align:left;font-weight:600;position:sticky;left:0;background:#fff;z-index:2;min-width:76px;border-right:2px solid var(--line)}
+.att-tbl .empname{font-weight:800;background:var(--bg);position:sticky;left:0;z-index:3;border-right:1px solid var(--line)}
+/* 직원 블록 구분: 각 직원 첫 줄 위에 굵은 테두리 */
+.att-tbl tr.empstart td{border-top:2px solid var(--divider)}
+.att-tbl tbody tr:first-child.empstart td{border-top:none}
+.att-tbl .calc{background:var(--green-soft);font-weight:700;color:#0a6b3d}
+.att-tbl .dow{font-size:10px;color:var(--gray);font-weight:400}
+
+/* 특근 지정 달력 */
+.calwrap{max-width:300px;margin:0 auto}
+.calhead{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px}
+.caldow{text-align:center;font-size:12px;font-weight:600;color:var(--ink2);padding:2px 0}
+.caldow.sun{color:var(--red)}.caldow.sat{color:var(--accent)}
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.calcell{height:38px;border:none;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:.1s;background:var(--bg);position:relative;user-select:none}
+.calcell.empty{background:transparent;cursor:default}
+.calcell:not(.empty):hover{background:var(--accent-soft)}
+.calcell .cd{font-size:13px;font-weight:500;color:var(--ink)}
+.calcell.sun .cd{color:var(--red)}.calcell.sat .cd{color:var(--accent)}
+.calcell .ch{display:none}
+/* 특근 지정 달력: on = 초록 강조 */
+.calcell.on{background:var(--green)}
+.calcell.on .cd{color:#fff;font-weight:700}
+/* 근무일 달력: worked = 연두 */
+.calcell.wd.worked{background:var(--green-soft)}
+.calcell.wd.worked .cd{color:#0a6b3d;font-weight:600}
+.calcell.wd:not(.worked) .cd{color:var(--gray)}
+.calcell:focus{outline:none;box-shadow:0 0 0 2px var(--accent)}
+/* 클릭 가능한 직원명 */
+.att-tbl .empclick{cursor:pointer;transition:.12s}
+.att-tbl .empclick:hover{background:var(--accent-soft);color:var(--accent)}
+/* 4대보험 고지 () 직원부담 표시 */
+td.edit{position:relative}
+.wnote{font-size:9.5px;color:var(--gray);text-align:center;margin-top:2px;line-height:1;white-space:nowrap}
+td.accrue{color:#0a6b3d;font-weight:600}
+/* 넓은 표(.fit) 공통 가독성: 헤더 강조 + 행 구분 + 여백 */
+table.fit{width:max-content;font-size:12.5px}
+table.fit th,table.fit td{padding:8px 11px;white-space:nowrap}
+table.fit thead th{background:#eef1f6;color:var(--ink);font-weight:800;border-bottom:2.5px solid #9aa3b2}
+table.fit tbody td{border-bottom:1px solid #dfe3ea}
+table.fit tbody tr:hover td{background:#eef4ff}
+/* 급여/공제/차감 그룹 색상 구분 (급여대장·회계전달 공통) */
+.fit th.grp-pay{background:#e4eefb!important;color:#2a4d7d}
+.fit th.grp-ded{background:#e9edf3!important;color:#414b5c}
+.fit th.grp-net{background:#f4ead6!important;color:#7a5622}
+.fit td.cell-pay{background:#f7fafe}
+.fit td.cell-ded{background:#f8fafb}
+.fit td.cell-net{background:#fdf6ea;font-weight:700}
+.fit td.sumcol,.fit th.sumcol{font-weight:700;border-left:1.5px solid #b9c0cc}
+.fit td.cell-pay.sumcol{background:#e8f1fc}
+.fit td.cell-ded.sumcol{background:#e9edf3}
+.fit td.grp-start,.fit th.grp-start{border-left:2px solid #aab1bd}
+.fit .dash{color:#cdd2da}
+.fit tbody tr:hover td.cell-net{background:#fbefd8}
+.fit tfoot .sum td{background:#e7edf6!important;font-weight:800;border-top:2px solid #9aa3b2}
+.fit tfoot .sum td.cell-net{background:#f3e6cd!important}
+.exp-tbl thead th{padding:8px 10px}
+/* 연간 합산 탭 */
+.atabs{display:flex;gap:6px;border-bottom:2px solid var(--line);margin-bottom:-2px}
+.atab{padding:9px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--gray);border-bottom:2px solid transparent;transition:.12s}
+.atab:hover{color:var(--ink)}
+.atab.active{color:var(--accent);border-bottom-color:var(--accent)}
+/* 연간 합산 월 선택 */
+.annualsel{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.mlabel{font-size:11.5px;font-weight:700;color:var(--ink2);letter-spacing:.2px}
+.mchips{display:inline-flex;gap:2px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px}
+.mchip{padding:6px 0;min-width:42px;text-align:center;border:none;border-radius:7px;background:none;cursor:pointer;font-size:12px;font-weight:600;color:var(--gray);transition:.12s}
+.mchip:hover{color:var(--ink);background:#e7ebf1}
+.mchip.on{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.mchip.on:hover{background:#dce9fd}
+.mchip.nodata{color:#c3c8d1}
+.mchip.nodata::after{content:none}
+.mchip.on.nodata{color:var(--accent);opacity:.55}
+.mactions{display:inline-flex;align-items:center;gap:6px}
+.mact{border:none;background:none;cursor:pointer;font-size:12px;font-weight:600;color:var(--ink2);padding:5px 8px;border-radius:7px;transition:.12s}
+.mact:hover{color:var(--accent);background:var(--accent-soft)}
+.mact-div{width:1px;height:13px;background:var(--line)}
+/* 직원 목록 드래그 정렬 */
+.draggable-row{transition:background .1s}
+.drag-handle{cursor:grab;user-select:none;font-weight:600}
+.drag-handle:active{cursor:grabbing}
+.draggable-row.dragging{opacity:.4;background:var(--accent-soft)}
+.draggable-row.drag-over{box-shadow:inset 0 2px 0 var(--accent)}
+/* 월 선택 (일괄 적용) */
+.monthpick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mpick{display:flex;align-items:center;gap:7px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:.12s}
+.mpick:hover{border-color:var(--accent);background:var(--accent-soft)}
+.mpick input{width:15px;height:15px;accent-color:var(--accent)}
+.mpick.cur{background:var(--bg);color:var(--gray);cursor:default}
+.mpick.cur:hover{border-color:var(--line);background:var(--bg)}
+
+/* Payslip print */
+.slips{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+.slip{border:1.5px solid var(--ink);border-radius:2px;padding:0;background:#fff;font-size:12px}
+.slip .sh{text-align:center;padding:10px;border-bottom:1.5px solid var(--ink);font-weight:800;font-size:14px}
+.slip .meta{display:flex;justify-content:space-between;padding:7px 12px;border-bottom:1px solid var(--line);font-size:11.5px}
+.slip .cols{display:grid;grid-template-columns:1fr 1fr}
+.slip .cols>div{padding:0}
+.slip .col-l{border-right:1px solid var(--line)}
+.slip .srow{display:flex;justify-content:space-between;padding:5px 12px;border-bottom:1px solid var(--line2)}
+.slip .srow .k{color:var(--ink2)}
+.slip .srow .v{font-weight:600}
+.slip .sh2{background:var(--bg);font-weight:700;padding:5px 12px;border-bottom:1px solid var(--line);font-size:11px}
+.slip .stot{display:flex;justify-content:space-between;padding:7px 12px;font-weight:800;background:#f0f3f7;border-top:1px solid var(--ink)}
+.slip .net{text-align:center;padding:10px;font-size:15px;font-weight:800;background:var(--ink);color:#fff}
+.slip .foot{text-align:center;padding:8px;font-size:11px;color:var(--gray)}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;
+  padding:11px 20px;border-radius:9px;font-size:13px;font-weight:600;z-index:200;opacity:0;transition:.25s;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.toast.show{opacity:1;bottom:32px}
+
+.page{display:none}
+.page.active{display:block}
+
+.diff-note{font-size:11px;color:var(--gray);margin-top:2px}
+.legend{display:flex;gap:16px;font-size:11.5px;color:var(--gray);flex-wrap:wrap}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend .sw{width:11px;height:11px;border-radius:3px}
+
+@media print{
+  .side,.topbar,.no-print{display:none!important}
+  .content{padding:0}
+  .slips{grid-template-columns:1fr 1fr;gap:8px}
+  .slip{page-break-inside:avoid;border-color:#000}
+  body{background:#fff;font-size:11px}
+}
+@media(max-width:820px){
+  .side{width:56px}.side .brand h1,.side .brand span,.side nav button span:not(.ic),.side .foot{display:none}
+  .side nav button{justify-content:center}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <h1>급여관리</h1>
+      <span>PAYROLL SYSTEM</span>
+    </div>
+    <nav id="nav">
+      <button data-page="dash" class="active"><span class="ic">▤</span><span>대시보드</span></button>
+      <button data-page="emp"><span class="ic">◱</span><span>직원 관리</span></button>
+      <button data-page="att"><span class="ic">◷</span><span>근태현황</span></button>
+      <button data-page="ledger"><span class="ic">▦</span><span>급여대장</span></button>
+      <button data-page="ins"><span class="ic">◈</span><span>4대보험 고지</span></button>
+      <button data-page="diff"><span class="ic">⇄</span><span>차액 정산</span></button>
+      <button data-page="slip"><span class="ic">▭</span><span>급여명세표</span></button>
+      <button data-page="export"><span class="ic">↧</span><span>회계 전달</span></button>
+      <button data-page="annual"><span class="ic">Σ</span><span>연간 합산</span></button>
+    </nav>
+    <div class="foot">
+      <div class="sync"><span class="dot off" id="syncDot"></span><span id="syncTxt">연결 중…</span></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <h2 id="pageTitle">대시보드</h2>
+        <div class="sub" id="pageSub">이번 달 급여 현황 요약</div>
+      </div>
+      <div class="right">
+        <div class="cotabs" id="coTabs"></div>
+        <div class="monthsel">
+          <button id="prevM">‹</button>
+          <span class="m" id="curM">2026.01</span>
+          <button id="nextM">›</button>
+        </div>
+      </div>
+    </div>
+    <div class="content" id="content"><!-- pages injected --></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalBg"><div class="modal" id="modalBox"></div></div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAvzdYl1RbvnC7Xo1fnhqrpJ8ySx7AWhzY",
+  authDomain: "payroll-dbcb0.firebaseapp.com",
+  projectId: "payroll-dbcb0",
+  storageBucket: "payroll-dbcb0.firebasestorage.app",
+  messagingSenderId: "640036161635",
+  appId: "1:640036161635:web:ec9a65874da0b446651056"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+window.__fb = { db, doc, getDoc, setDoc, collection, getDocs, onSnapshot };
+
+/* ===== 급여관리 — 코어 로직 ===== */
+/* db provided by firebase init */
+
+/* ---------- 상수 ---------- */
+const COMPANIES = [
+  {id:'egsan', name:'이지산업'},
+  {id:'cheolgi', name:'철기시대'},
+  {id:'gscnt', name:'지에스시엔티'}
+];
+const DEDUCT_KEYS = ['gap','local','health','care','pension','emp','etc']; // 갑근세,지방소득세,건강,장기요양,국민연금,고용,기타
+const DEDUCT_LABEL = {gap:'갑근세',local:'지방소득세',health:'건강보험',care:'장기요양',pension:'국민연금',emp:'고용보험',etc:'기타공제'};
+const INS_KEYS = ['health','care','pension','emp','injury']; // 4대보험 + 산재 (실제 고지)
+const INS_LABEL = {health:'건강보험',care:'장기요양',pension:'국민연금',emp:'고용보험',injury:'산재보험'};
+// 보험별 처리 규칙:
+//  input     = 고지서 표기 기준 ('half'=근로자분 50%만 표기 / 'full'=100% 총액 표기)
+//  workerRatio = '입력값 → 근로자 부담분' 환산 (명세·차액대조 반영분 = 입력액 × 비율)
+//  totalMult = '입력값 → 회사포함 100% 총액' 환산 배수
+//  inDiff    = 차액 대조 기본 포함 여부 (고용보험은 직원별 '회사전액부담' 설정으로 개별 제어)
+const INS_CONFIG = {
+  health:  {input:'half', workerRatio:1,   totalMult:2, inDiff:true},   // 고지서 50%표기 → 입력=근로자분, 총액=×2
+  care:    {input:'half', workerRatio:1,   totalMult:2, inDiff:true},   // 고지서 50%표기 → 입력=근로자분, 총액=×2
+  pension: {input:'full', workerRatio:0.5, totalMult:1, inDiff:true},   // 고지서 100%표기 → 근로자=÷2, 총액=그대로
+  emp:     {input:'full', workerRatio:0.9/2.05, totalMult:1, inDiff:true},   // 고지서 100%표기. 직원부담=고지×0.9/2.05 (근로자0.9%÷총2.05%, 150인미만 기준)
+  injury:  {input:'full', workerRatio:0,   totalMult:1, inDiff:false}   // 산재=회사100%, 근로자0, 기록용
+};
+// 입력액 → 회사포함 100% 총액
+function insTotalAmount(key, entered){ const cfg=INS_CONFIG[key]; return Math.round((entered||0)*(cfg?cfg.totalMult:1)); }
+// 고지액 → 차액대조/명세 반영용 근로자 부담분
+function insWorkerShare(key, noticed){ const cfg=INS_CONFIG[key]; return Math.round((noticed||0)*(cfg?cfg.workerRatio:1)); }
+// 직원 가입 체크박스용 (산재는 사업장 단위라 제외)
+const INS_ENROLL_KEYS = ['health','care','pension','emp'];
+// 직원별 차액 대조 대상 보험 키 (고용보험은 회사전액부담 직원이면 제외)
+function insDiffKeysFor(emp){
+  return INS_KEYS.filter(k=>{
+    if(!INS_CONFIG[k].inDiff) return false;
+    if(k==='emp' && emp && emp.empFull) return false; // 고용보험 회사전액부담 → 대조 제외
+    return true;
+  });
+}
+const PAY_ITEMS = [
+  {k:'base',t:'기본급'},{k:'senior',t:'근속수당'},{k:'ot',t:'잔업수당'},
+  {k:'hol',t:'특근수당'},{k:'etc',t:'상여금'},{k:'car',t:'차량유지'},
+  {k:'meal',t:'식대'},{k:'other',t:'기타'}
+];
+
+/* ---------- 상태 ---------- */
+let state = {
+  company: 'egsan',       // 현재 선택된 회사
+  month: '2026-01',
+  employees: [],          // 현재 회사 직원 마스터
+  monthData: {},          // 현재 회사·월 데이터
+  loaded: false
+};
+let empUnsub = null;      // 직원 실시간 구독 해제 함수
+
+/* ---------- 유틸 ---------- */
+const won = n => (Math.round(n||0)).toLocaleString('ko-KR');
+const wonInput = n => (n===0||n==null)?'':Math.round(n).toLocaleString('ko-KR');
+const parseNum = s => { const v = parseFloat(String(s).replace(/[^0-9.-]/g,'')); return isNaN(v)?0:v; };
+const uid = () => 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const monthLabel = m => m.replace('-','.');
+const daysInMonth = m => { const [y,mo]=m.split('-').map(Number); return new Date(y,mo,0).getDate(); };
+const dowOf = (m,d) => { const [y,mo]=m.split('-').map(Number); return new Date(y,mo-1,d).getDay(); }; // 0=일
+const DOW = ['일','월','화','수','목','금','토'];
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(t.__t); t.__t=setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+/* ---------- Firebase 동기화 ---------- */
+function setSync(ok,txt){
+  document.getElementById('syncDot').className = 'dot'+(ok?'':' off');
+  document.getElementById('syncTxt').textContent = txt;
+}
+async function loadEmployees(){
+  const snap = await getDocs(collection(db,'companies',state.company,'employees'));
+  state.employees = [];
+  snap.forEach(d=>state.employees.push({id:d.id,...d.data()}));
+  state.employees.sort((a,b)=>(a.order||0)-(b.order||0));
+}
+async function saveEmployee(emp){
+  await setDoc(doc(db,'companies',state.company,'employees',emp.id), emp);
+}
+async function deleteEmployeeDoc(id){
+  const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+  await deleteDoc(doc(db,'companies',state.company,'employees',id));
+}
+async function loadMonth(m){
+  const snap = await getDoc(doc(db,'companies',state.company,'months',m));
+  state.monthData = snap.exists()? snap.data() : {attendance:{},overrides:{},insurance:{},meta:{payDate:defaultPayDate(m)}};
+  state.monthData.attendance = state.monthData.attendance||{};
+  state.monthData.overrides = state.monthData.overrides||{};
+  state.monthData.insurance = state.monthData.insurance||{};
+  state.monthData.meta = state.monthData.meta||{payDate:defaultPayDate(m)};
+}
+let saveTimer=null;
+function saveMonthDebounced(){
+  clearTimeout(saveTimer);
+  setSync(true,'저장 중…');
+  const co=state.company, mo=state.month, data=state.monthData;
+  saveTimer=setTimeout(async()=>{
+    try{ await setDoc(doc(db,'companies',co,'months',mo), data); setSync(true,'동기화됨'); }
+    catch(e){ setSync(false,'저장 실패'); console.error(e); }
+  },600);
+}
+function defaultPayDate(m){ const [y,mo]=m.split('-').map(Number); const n=mo===12?`${y+1}-01`:`${y}-${String(mo+1).padStart(2,'0')}`; return n+'-20'; }
+
+/* ---------- 계산 엔진 ---------- */
+// 직원의 해당 월 근태 → 시간 집계
+function attHours(empId){
+  const a = state.monthData.attendance[empId] || {};
+  const wk = a.weekday||{}, ot=a.overtime||{}, hol=a.holiday||{};
+  const sum = o => Object.values(o).reduce((s,v)=>s+(parseNum(v)||0),0);
+  return { weekday: sum(wk), overtime: sum(ot), holiday: sum(hol) };
+}
+// 기본근무 자동채우기: 월~금 평일 8h + 토요일 주휴 8h(유급), 잔업은 월~금 2h. 일요일 휴무. 특근은 수기.
+function fillDefaultAttendance(empId, force=false){
+  const dim = daysInMonth(state.month);
+  const att = state.monthData.attendance[empId] || {weekday:{},overtime:{},holiday:{}};
+  att.weekday=att.weekday||{}; att.overtime=att.overtime||{}; att.holiday=att.holiday||{};
+  const hasData = Object.keys(att.weekday).length||Object.keys(att.overtime).length||Object.keys(att.holiday).length;
+  if(hasData && !force) return false;
+  if(force){ att.weekday={}; att.overtime={}; } // 특근(holiday)은 수기라 보존
+  for(let d=1; d<=dim; d++){
+    const dw = dowOf(state.month, d); // 0=일,6=토
+    if(dw>=1 && dw<=5){ att.weekday[d]=8; att.overtime[d]=2; } // 월~금: 근무 8h + 잔업 2h
+    else if(dw===6){ att.weekday[d]=8; } // 토요일: 주휴 8h (유급, 잔업 없음)
+  }
+  state.monthData.attendance[empId]=att;
+  return true;
+}
+// 그 달 기본 스케줄 평일근무 시간(월~금 8h + 토 8h) — 만근 기준선
+function standardWeekdayHours(){
+  const dim = daysInMonth(state.month); let h=0;
+  for(let d=1; d<=dim; d++){ const dw=dowOf(state.month,d); if(dw>=1&&dw<=6) h+=8; }
+  return h;
+}
+// 직원 한 명의 급여 전체 계산 (지급/공제/차감)
+function calcEmp(emp){
+  const ov = (state.monthData.overrides[emp.id])||{};
+  const pay = {};
+  if(emp.type==='variable'){
+    const h = attHours(emp.id);
+    const rate = emp.hourlyRate||0;
+    const otMul = emp.otMult??1.5, holMul = emp.holMult??1.5;
+    const stdMonth = emp.stdHours??209;        // 월 기준시간(만근 시 기본급)
+    const stdWeekday = standardWeekdayHours();  // 그 달 기본 스케줄 평일근무 시간(월~토 8h)
+    const fullAttendance = stdWeekday>0 && h.weekday>=stdWeekday; // 만근이면 209h 고정
+    const baseHours = fullAttendance ? stdMonth : h.weekday;      // 결근/중도면 실제시간
+    pay.base = Math.round(baseHours * rate); // 기본급 = 근무시간 × 시급 (식대 포함된 값)
+    pay.ot   = Math.round(h.overtime * rate * otMul);
+    pay.hol  = Math.round(h.holiday * rate * holMul);
+    pay.senior = num(emp.senior);
+    pay.etc = num(emp.etcAllow); pay.car=num(emp.car); pay.meal=num(emp.meal); pay.other=num(emp.other);
+    pay._hours = h; pay._rate=rate; pay._otRate=Math.round(rate*otMul); pay._holRate=Math.round(rate*holMul);
+    pay._full = fullAttendance; pay._baseHours = baseHours; pay._stdMonth = stdMonth; pay._mealInc = num(emp.mealIncluded);
+  } else {
+    pay.base = num(emp.base);
+    pay.senior = num(emp.senior);
+    pay.ot = num(emp.ot); pay.hol=num(emp.hol);
+    pay.etc = num(emp.etcAllow); pay.car=num(emp.car); pay.meal=num(emp.meal); pay.other=num(emp.other);
+  }
+  // override (수동 조정) 반영
+  PAY_ITEMS.forEach(it=>{ if(ov['pay_'+it.k]!=null && ov['pay_'+it.k]!=='') pay[it.k]=parseNum(ov['pay_'+it.k]); });
+  const gross = PAY_ITEMS.reduce((s,it)=>s+(pay[it.k]||0),0);
+
+  // 공제
+  const ded = {};
+  DEDUCT_KEYS.forEach(k=>{
+    const o = ov['ded_'+k];
+    if(o!=null && o!=='') ded[k]=parseNum(o);
+    else ded[k]=num(emp['ded_'+k]); // 직원 마스터 기본 공제값
+  });
+  const totDed = DEDUCT_KEYS.reduce((s,k)=>s+(ded[k]||0),0);
+  const net = gross - totDed;
+  return {pay,gross,ded,totDed,net};
+}
+const num = v => parseNum(v);
+
+/* ---------- 라우팅 ---------- */
+const PAGES = {
+  dash:{t:'대시보드',s:'이번 달 급여 현황 요약'},
+  emp:{t:'직원 관리',s:'직원 개별 등록·수정·삭제'},
+  att:{t:'근태현황',s:'변동급 직원 근태 입력 → 잔업·특근 자동 계산'},
+  ledger:{t:'급여대장',s:'전 직원 급여·공제·차감 지급액'},
+  ins:{t:'4대보험 고지',s:'매월 실제 고지되는 보험료 기록'},
+  diff:{t:'차액 정산',s:'명세서 공제액 vs 실제 고지액 대조'},
+  slip:{t:'급여명세표',s:'직원별 급여명세서 출력'},
+  export:{t:'회계 전달',s:'회계사무실 전달용 양식 · 엑셀 다운로드'},
+  annual:{t:'연간 합산',s:'직원별 연간 공제·차액 집계 · 연말정산 상계'}
+};
+let curPage='dash';
+function go(page){
+  curPage=page;
+  if(page!=='annual') window._annualCache=null; // 다른 페이지 갔다오면 연간은 새로 로드
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
+  document.getElementById('pageTitle').textContent=PAGES[page].t;
+  document.getElementById('pageSub').textContent=PAGES[page].s;
+  render();
+}
+document.getElementById('nav').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(b) go(b.dataset.page);
+});
+
+/* ---------- 월 이동 ---------- */
+function shiftMonth(delta){
+  let [y,m]=state.month.split('-').map(Number);
+  m+=delta; if(m<1){m=12;y--;} if(m>12){m=1;y++;}
+  state.month=`${y}-${String(m).padStart(2,'0')}`;
+  document.getElementById('curM').textContent=monthLabel(state.month);
+  loadMonth(state.month).then(render);
+}
+document.getElementById('prevM').onclick=()=>shiftMonth(-1);
+document.getElementById('nextM').onclick=()=>shiftMonth(1);
+
+/* ---------- 렌더 디스패치 ---------- */
+function render(){
+  const el=document.getElementById('content');
+  if(!state.loaded){ el.innerHTML='<div class="empty"><div class="big">◌</div><p>데이터 불러오는 중…</p></div>'; return; }
+  ({dash:renderDash,emp:renderEmp,att:renderAtt,ledger:renderLedger,
+    ins:renderIns,diff:renderDiff,slip:renderSlip,export:renderExport,annual:renderAnnual}[curPage])(el);
+}
+
+/* expose */
+window.APP = { state, COMPANIES, calcEmp, attHours, fillDefaultAttendance, standardWeekdayHours, PAY_ITEMS, DEDUCT_KEYS, DEDUCT_LABEL, INS_KEYS, INS_LABEL, INS_CONFIG, INS_ENROLL_KEYS, insDiffKeysFor, insWorkerShare, insTotalAmount,
+  won, wonInput, parseNum, num, uid, saveEmployee, deleteEmployeeDoc, loadEmployees, saveMonthDebounced,
+  toast, render, go, daysInMonth, dowOf, DOW, monthLabel, PAGES, defaultPayDate, switchCompany };
+
+/* ---------- 회사 전환 ---------- */
+function subscribeEmployees(){
+  if(empUnsub){ empUnsub(); empUnsub=null; }
+  empUnsub = onSnapshot(collection(db,'companies',state.company,'employees'),snap=>{
+    state.employees=[]; snap.forEach(d=>state.employees.push({id:d.id,...d.data()}));
+    state.employees.sort((a,b)=>(a.order||0)-(b.order||0));
+    if(state.loaded) render();
+  });
+}
+async function switchCompany(coId){
+  if(coId===state.company) return;
+  state.company=coId;
+  renderCompanyTabs();
+  state.loaded=false; render();
+  try{
+    await loadEmployees();
+    await loadMonth(state.month);
+    state.loaded=true; setSync(true,'동기화됨');
+    subscribeEmployees();
+    render();
+  }catch(e){ console.error(e); setSync(false,'연결 실패'); }
+}
+function renderCompanyTabs(){
+  const wrap=document.getElementById('coTabs'); if(!wrap) return;
+  wrap.innerHTML=COMPANIES.map(c=>
+    `<button class="cotab${c.id===state.company?' active':''}" data-co="${c.id}">${c.name}</button>`).join('');
+  wrap.querySelectorAll('button').forEach(b=>b.onclick=()=>switchCompany(b.dataset.co));
+}
+
+/* ---------- 초기화 ---------- */
+async function __bootInit(){
+  document.getElementById('curM').textContent=monthLabel(state.month);
+  renderCompanyTabs();
+  try{
+    setSync(false,'연결 중…');
+    await loadEmployees();
+    await loadMonth(state.month);
+    state.loaded=true;
+    setSync(true,'동기화됨');
+    subscribeEmployees();
+    render();
+  }catch(e){
+    console.error(e); setSync(false,'연결 실패');
+    document.getElementById('content').innerHTML=
+      '<div class="card"><div class="card-b"><b>Firebase 연결에 실패했습니다.</b><br>'+
+      'Firestore 데이터베이스가 생성되었는지, 보안 규칙이 읽기/쓰기를 허용하는지 확인하세요.<br>'+
+      '<span style="color:#888;font-size:12px">'+(e.message||e)+'</span></div></div>';
+  }
+}
+
+
+(function(){
+/* ===== 페이지 렌더러 ===== */
+const A = window.APP;
+const {won,wonInput,parseNum,num,uid,toast,daysInMonth,dowOf,DOW,monthLabel} = A;
+
+/* 헬퍼: 전 직원 계산 결과 */
+function allCalc(){
+  return A.state.employees.map(e=>({emp:e,c:A.calcEmp(e)}));
+}
+function grandTotals(){
+  const rows=allCalc(); const g={gross:0,totDed:0,net:0,ded:{}};
+  A.DEDUCT_KEYS.forEach(k=>g.ded[k]=0);
+  A.PAY_ITEMS.forEach(it=>g['pay_'+it.k]=0);
+  rows.forEach(({c})=>{
+    g.gross+=c.gross; g.totDed+=c.totDed; g.net+=c.net;
+    A.DEDUCT_KEYS.forEach(k=>g.ded[k]+=c.ded[k]||0);
+    A.PAY_ITEMS.forEach(it=>g['pay_'+it.k]+=c.pay[it.k]||0);
+  });
+  return {rows,g};
+}
+
+/* ========== 1. 대시보드 ========== */
+window.renderDash = function(el){
+  const {rows,g}=grandTotals();
+  const md=A.state.monthData;
+  // 4대보험 차액 (국민연금 근로자 50%, 고용보험은 회사전액부담 직원 제외)
+  let insTot=0, dedInsTot=0;
+  A.state.employees.forEach(e=>{
+    const ins=md.insurance[e.id]||{}; const c=A.calcEmp(e);
+    A.insDiffKeysFor(e).forEach(k=>{
+      if(e['ins_'+k]) insTot+=A.insWorkerShare(k,num(ins[k]));
+      dedInsTot+=c.ded[k]||0;
+    });
+  });
+  const diff = dedInsTot - insTot; // 명세 − 고지 (차액정산·회계전달과 동일)
+  const cnt=A.state.employees.length;
+  const varCnt=A.state.employees.filter(e=>e.type==='variable').length;
+
+  el.innerHTML = `
+  <div class="stats">
+    <div class="stat accent"><div class="lbl">지급 총액 (급여계)</div><div class="val">${won(g.gross)}<span style="font-size:13px">원</span></div><div class="foot">직원 ${cnt}명 · 변동급 ${varCnt}명</div></div>
+    <div class="stat"><div class="lbl">공제 총액</div><div class="val sm">${won(g.totDed)}<span style="font-size:12px">원</span></div><div class="foot">4대보험+세금</div></div>
+    <div class="stat green"><div class="lbl">차감 지급액 (실지급)</div><div class="val sm">${won(g.net)}<span style="font-size:12px">원</span></div><div class="foot">계좌 이체 총액</div></div>
+    <div class="stat ${diff===0?'':'amber'}"><div class="lbl">4대보험 차액</div><div class="val sm">${diff>0?'+':''}${won(diff)}<span style="font-size:12px">원</span></div><div class="foot">명세공제 − 고지(근로자분)</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><div><h3>${monthLabel(A.state.month)} 급여 요약</h3><div class="desc">지급일 ${md.meta.payDate||'-'}</div></div>
+      <div><button class="btn sm" onclick="APP.go('ledger')">급여대장 열기 →</button></div></div>
+    <div class="card-b flush"><div class="tbl-wrap"><table>
+      <thead><tr><th class="c">순번</th><th class="l">성명</th><th class="l">직책</th><th>급여계</th><th>공제계</th><th>차감지급액</th></tr></thead>
+      <tbody>
+      ${rows.map(({emp,c},i)=>`<tr>
+        <td class="c muted">${i+1}</td>
+        <td class="name l">${esc(emp.name)||'<span class="zero">미입력</span>'} ${emp.type==='variable'?'<span class="tag var">변동</span>':'<span class="tag fixed">고정</span>'}</td>
+        <td class="l muted">${esc(emp.title||'')}</td>
+        <td>${won(c.gross)}</td><td>${won(c.totDed)}</td><td><b>${won(c.net)}</b></td>
+      </tr>`).join('')||`<tr><td colspan="6" class="empty" style="text-align:center;padding:30px">등록된 직원이 없습니다.</td></tr>`}
+      </tbody>
+      <tfoot><tr class="sum"><td colspan="3" class="l">합계</td><td>${won(g.gross)}</td><td>${won(g.totDed)}</td><td>${won(g.net)}</td></tr></tfoot>
+    </table></div></div>
+  </div>`;
+};
+
+/* ========== 2. 직원 관리 ========== */
+window.renderEmp = function(el){
+  const emps=A.state.employees;
+  el.innerHTML=`
+  <div class="card">
+    <div class="card-h"><div><h3>직원 목록</h3><div class="desc">고정급/변동급 구분 · 기본 공제값 · 4대보험 설정 · <b>순번 칸을 잡고 드래그하면 순서 변경</b></div></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="migrateMeal()">식대→기본급포함 일괄전환</button>
+        <button class="btn primary" onclick="openEmpModal()">+ 직원 등록</button></div></div>
+    <div class="card-b flush"><div class="tbl-wrap"><table>
+      <thead><tr><th class="c">순번</th><th class="l">성명</th><th class="l">직책</th><th class="c">구분</th>
+        <th>기본급/시급</th><th class="c">잔업배율</th><th class="c">4대보험</th><th class="c">관리</th></tr></thead>
+      <tbody id="empTbody">
+      ${emps.map((e,i)=>`<tr draggable="true" data-id="${e.id}" class="draggable-row">
+        <td class="c muted drag-handle" title="드래그하여 순서 변경">⠿ ${i+1}</td>
+        <td class="name l">${esc(e.name)||'<span class="zero">미입력</span>'}</td>
+        <td class="l muted">${esc(e.title||'')}</td>
+        <td class="c">${e.type==='variable'?'<span class="tag var">변동급</span>':'<span class="tag fixed">고정급</span>'}</td>
+        <td>${e.type==='variable'?won(e.hourlyRate)+'<span class="muted" style="font-size:10px">/h</span>':won(e.base)}</td>
+        <td class="c muted">${e.type==='variable'?(e.otMult??1.5)+'×':'-'}</td>
+        <td class="c">${insBadges(e)}</td>
+        <td class="c"><button class="btn sm" onclick="openEmpModal('${e.id}')">수정</button>
+          <button class="btn sm" onclick="openCopyModal('${e.id}')">복사</button>
+          <button class="btn sm danger" onclick="delEmp('${e.id}')">삭제</button></td>
+      </tr>`).join('')||`<tr><td colspan="8"><div class="empty"><div class="big">◱</div><p>등록된 직원이 없습니다.</p><button class="btn primary" onclick="openEmpModal()">첫 직원 등록하기</button></div></td></tr>`}
+      </tbody>
+    </table></div></div>
+  </div>`;
+  attachEmpDragSort();
+};
+// 직원 목록 드래그 정렬
+function attachEmpDragSort(){
+  const tbody=document.getElementById('empTbody'); if(!tbody) return;
+  let dragEl=null;
+  tbody.querySelectorAll('tr.draggable-row').forEach(tr=>{
+    tr.addEventListener('dragstart',e=>{ dragEl=tr; tr.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
+    tr.addEventListener('dragend',()=>{ tr.classList.remove('dragging'); tbody.querySelectorAll('tr').forEach(r=>r.classList.remove('drag-over')); });
+    tr.addEventListener('dragover',e=>{ e.preventDefault();
+      const after=(e.clientY - tr.getBoundingClientRect().top) > tr.offsetHeight/2;
+      tbody.querySelectorAll('tr').forEach(r=>r.classList.remove('drag-over'));
+      tr.classList.add('drag-over');
+      if(dragEl && dragEl!==tr){
+        if(after) tr.after(dragEl); else tr.before(dragEl);
+      }
+    });
+  });
+  tbody.addEventListener('drop',e=>{ e.preventDefault(); saveEmpOrder(); });
+}
+async function saveEmpOrder(){
+  const tbody=document.getElementById('empTbody'); if(!tbody) return;
+  const ids=[...tbody.querySelectorAll('tr.draggable-row')].map(tr=>tr.dataset.id);
+  const {db,doc,setDoc,getDoc}=window.__fb;
+  try{
+    // order를 새 순서대로 부여하고 저장
+    for(let i=0;i<ids.length;i++){
+      const emp=A.state.employees.find(e=>e.id===ids[i]);
+      if(emp){ emp.order=i+1;
+        const ref=doc(db,'companies',A.state.company,'employees',emp.id);
+        const snap=await getDoc(ref); const data=snap.exists()?snap.data():emp;
+        data.order=i+1; await setDoc(ref,data);
+      }
+    }
+    // 로컬 정렬 반영 후 재렌더
+    A.state.employees.sort((a,b)=>(a.order||0)-(b.order||0));
+    A.render();
+    toast('순서가 변경되었습니다');
+  }catch(e){ toast('순서 저장 실패'); console.error(e); }
+}
+function insBadges(e){
+  const on=A.INS_ENROLL_KEYS.filter(k=>e['ins_'+k]);
+  if(!on.length) return '<span class="zero">미가입</span>';
+  return on.map(k=>({health:'건',care:'요',pension:'국',emp:'고'}[k])).join(' ');
+}
+
+/* 직원 등록/수정 모달 */
+window.openEmpModal = function(id){
+  const e = id? A.state.employees.find(x=>x.id===id) : {id:uid(),type:'fixed',otMult:1.5,holMult:1.5,order:A.state.employees.length+1,
+    ins_health:true,ins_care:true,ins_pension:true,ins_emp:true};
+  const isVar = e.type==='variable';
+  const box=document.getElementById('modalBox');
+  box.innerHTML=`
+    <div class="modal-h"><h3>${id?'직원 정보 수정':'직원 등록'}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-b">
+      <div class="sec-title">기본 정보</div>
+      <div class="form-grid">
+        <div class="fld"><label>성명</label><input id="f_name" value="${esc(e.name||'')}"></div>
+        <div class="fld"><label>직책</label><input id="f_title" value="${esc(e.title||'')}" placeholder="생산직 사원"></div>
+        <div class="fld"><label>급여 구분</label><select id="f_type" onchange="empTypeChange(this.value)">
+          <option value="fixed" ${!isVar?'selected':''}>고정급 (월급제)</option>
+          <option value="variable" ${isVar?'selected':''}>변동급 (근태 기반)</option></select></div>
+        <div class="fld"><label>순번</label><input id="f_order" type="number" value="${e.order||1}"></div>
+      </div>
+
+      <div id="varBox" style="display:${isVar?'block':'none'}">
+        <div class="sec-title">변동급 설정 (근태 자동계산)</div>
+        <div class="form-grid">
+          <div class="fld"><label>통상 시급 (원)</label><input id="f_rate" class="wonf" value="${wonInput(e.hourlyRate)}" placeholder="10,320"><div class="hint">만근 시 기본급 = 시급 × 기준시간</div></div>
+          <div class="fld"><label>월 기준시간</label><input id="f_std" type="number" value="${e.stdHours??209}"><div class="hint">만근 시 이 시간으로 고정(주휴 포함 보통 209)</div></div>
+          <div class="fld"><label>기본급 포함 식대 (비과세)</label><input id="f_mealinc" class="wonf" value="${wonInput(e.mealIncluded)}" placeholder="200,000"><div class="hint">기본급에 포함된 비과세 식대. 명세표엔 안 보이고 회계양식에서만 기본급과 분리 표시</div></div>
+          <div class="fld"><label>잔업 배율</label><input id="f_otm" type="number" step="0.1" value="${e.otMult??1.5}"><div class="hint">잔업단가 = 시급 × 배율</div></div>
+          <div class="fld"><label>특근 배율</label><input id="f_holm" type="number" step="0.1" value="${e.holMult??1.5}"><div class="hint">특근단가 = 시급 × 배율</div></div>
+          <div class="fld"><label>근속수당 (월 고정)</label><input id="f_senior_v" class="wonf" value="${wonInput(e.senior)}"></div>
+        </div>
+      </div>
+
+      <div id="fixBox" style="display:${isVar?'none':'block'}">
+        <div class="sec-title">고정급 설정 (매월 동일)</div>
+        <div class="form-grid">
+          <div class="fld"><label>기본급 (원)</label><input id="f_base" class="wonf" value="${wonInput(e.base)}"></div>
+          <div class="fld"><label>근속/직책수당</label><input id="f_senior_f" class="wonf" value="${wonInput(e.senior)}"></div>
+          <div class="fld"><label>잔업수당</label><input id="f_ot" class="wonf" value="${wonInput(e.ot)}"></div>
+          <div class="fld"><label>특근수당</label><input id="f_hol" class="wonf" value="${wonInput(e.hol)}"></div>
+        </div>
+      </div>
+
+      <div class="sec-title">기타 수당 (공통)</div>
+      <div class="form-grid">
+        <div class="fld"><label>상여금</label><input id="f_etcAllow" class="wonf" value="${wonInput(e.etcAllow)}"></div>
+        <div class="fld"><label>차량유지비</label><input id="f_car" class="wonf" value="${wonInput(e.car)}"></div>
+        <div class="fld"><label>식대 (비과세)</label><input id="f_meal" class="wonf" value="${wonInput(e.meal)}" placeholder="200,000"></div>
+        <div class="fld"><label>기타</label><input id="f_other" class="wonf" value="${wonInput(e.other)}"></div>
+      </div>
+
+      <div class="sec-title">4대보험 가입</div>
+      <div class="form-grid">
+        ${A.INS_ENROLL_KEYS.map(k=>`<div class="checkrow"><input type="checkbox" id="f_ins_${k}" ${e['ins_'+k]?'checked':''}><label for="f_ins_${k}">${A.INS_LABEL[k]}</label></div>`).join('')}
+      </div>
+      <div class="checkrow" style="margin-top:6px"><input type="checkbox" id="f_empFull" ${e.empFull?'checked':''}><label for="f_empFull">고용보험 회사전액부담 (외국인 등 — 차액 대조에서 제외)</label></div>
+
+      <div class="sec-title">기본 공제값 (매월 명세서 기본 공제 · 근태와 무관)</div>
+      <div class="form-grid">
+        ${A.DEDUCT_KEYS.map(k=>{
+          const extra = k==='gap' ? ` oninput="syncLocalTax()"` : '';
+          const hint = k==='local' ? '<div class="hint" style="font-size:10px">갑근세 입력 시 자동(10%)</div>' : '';
+          return `<div class="fld"><label>${A.DEDUCT_LABEL[k]}</label><input id="f_ded_${k}" class="wonf" value="${wonInput(e['ded_'+k])}"${extra}>${hint}</div>`;
+        }).join('')}
+      </div>
+      <div class="hint" style="margin-top:8px;color:#888">※ 세금·4대보험은 매월 고지·조정되므로, 여기 입력값은 기본값이며 급여대장에서 월별로 덮어쓸 수 있습니다.</div>
+    </div>
+    <div class="modal-f">
+      <button class="btn" onclick="closeModal()">취소</button>
+      <button class="btn primary" onclick="saveEmpModal('${e.id}')">저장</button>
+    </div>`;
+  document.getElementById('modalBg').classList.add('show');
+  attachWonFormat();
+};
+window.empTypeChange=v=>{document.getElementById('varBox').style.display=v==='variable'?'block':'none';
+  document.getElementById('fixBox').style.display=v==='variable'?'none':'block';};
+window.closeModal=()=>document.getElementById('modalBg').classList.remove('show');
+
+window.syncLocalTax = function(){
+  const gapEl=document.getElementById('f_ded_gap'), localEl=document.getElementById('f_ded_local');
+  if(!gapEl||!localEl) return;
+  const gap=A.parseNum(gapEl.value);
+  localEl.value = gap>0 ? (Math.floor(gap*0.1/10)*10).toLocaleString('ko-KR') : '';
+};
+window.saveEmpModal = async function(id){
+  const V = gid=>{const el=document.getElementById(gid); if(!el)return undefined; return el.classList.contains('wonf')?parseNum(el.value):el.value;};
+  const type=document.getElementById('f_type').value;
+  const emp={
+    id, type,
+    name:document.getElementById('f_name').value.trim(),
+    title:document.getElementById('f_title').value.trim(),
+    order:parseInt(document.getElementById('f_order').value)||1,
+    etcAllow:V('f_etcAllow'),car:V('f_car'),meal:V('f_meal'),other:V('f_other')
+  };
+  if(type==='variable'){
+    emp.hourlyRate=V('f_rate'); emp.otMult=parseFloat(document.getElementById('f_otm').value)||1.5;
+    emp.holMult=parseFloat(document.getElementById('f_holm').value)||1.5; emp.senior=V('f_senior_v');
+    emp.stdHours=parseFloat(document.getElementById('f_std').value)||209;
+    emp.mealIncluded=V('f_mealinc');
+  } else {
+    emp.base=V('f_base'); emp.senior=V('f_senior_f'); emp.ot=V('f_ot'); emp.hol=V('f_hol');
+  }
+  A.INS_ENROLL_KEYS.forEach(k=>emp['ins_'+k]=document.getElementById('f_ins_'+k).checked);
+  emp.empFull=document.getElementById('f_empFull').checked;
+  A.DEDUCT_KEYS.forEach(k=>emp['ded_'+k]=V('f_ded_'+k));
+  try{
+    await A.saveEmployee(emp);
+    // 변동급이면 이번 달 근태 기본채우기 (기존 근태 없을 때만)
+    if(type==='variable'){
+      const filled = A.fillDefaultAttendance(emp.id, false);
+      if(filled) A.saveMonthDebounced();
+    }
+    closeModal(); toast('저장되었습니다');
+  }
+  catch(e){ toast('저장 실패'); console.error(e); }
+};
+window.delEmp = async function(id){
+  const e=A.state.employees.find(x=>x.id===id);
+  if(!confirm(`'${e?.name||'직원'}' 님을 삭제할까요?\n급여 기록은 유지되지만 목록에서 제거됩니다.`))return;
+  try{ await A.deleteEmployeeDoc(id); toast('삭제되었습니다'); }catch(e){toast('삭제 실패');}
+};
+
+/* 직원 복사 모달 */
+window.openCopyModal = function(id){
+  const e=A.state.employees.find(x=>x.id===id); if(!e)return;
+  const box=document.getElementById('modalBox');
+  box.innerHTML=`
+    <div class="modal-h"><h3>직원 복사</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-b">
+      <p style="color:var(--ink2);margin-bottom:16px">'<b>${esc(e.name)||'미입력'}</b>' 님의 급여 설정(기본급·수당·공제·4대보험)을 그대로 복제합니다. 근태 기록은 복사되지 않습니다.</p>
+      <div class="form-grid">
+        <div class="fld"><label>복사할 회사</label><select id="copy_co">
+          ${A.COMPANIES.map(c=>`<option value="${c.id}" ${c.id===A.state.company?'selected':''}>${c.name}${c.id===A.state.company?' (현재)':''}</option>`).join('')}
+        </select><div class="hint">다른 회사로 복사하면 이홍진 님처럼 겸직 직원을 쉽게 등록할 수 있습니다.</div></div>
+        <div class="fld"><label>새 이름</label><input id="copy_name" value="${esc(e.name||'')}"><div class="hint">필요시 이름을 바꾸세요</div></div>
+        <div class="fld"><label>복사 개수</label><input id="copy_cnt" type="number" value="1" min="1" max="20"><div class="hint">여러 명 한꺼번에 만들 때</div></div>
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn" onclick="closeModal()">취소</button>
+      <button class="btn primary" onclick="doCopy('${e.id}')">복사</button>
+    </div>`;
+  document.getElementById('modalBg').classList.add('show');
+};
+window.doCopy = async function(id){
+  const src=A.state.employees.find(x=>x.id===id); if(!src)return;
+  const targetCo=document.getElementById('copy_co').value;
+  const newName=document.getElementById('copy_name').value.trim();
+  const cnt=Math.max(1,Math.min(20,parseInt(document.getElementById('copy_cnt').value)||1));
+  const baseOrder=(targetCo===A.state.company? A.state.employees.length : 0);
+  try{
+    for(let i=0;i<cnt;i++){
+      const clone=JSON.parse(JSON.stringify(src));
+      clone.id=A.uid();
+      clone.name = cnt>1 ? `${newName||src.name} ${i+1}` : (newName||`${src.name} (사본)`);
+      clone.order=baseOrder+i+1;
+      await saveEmployeeTo(targetCo, clone);
+      // 변동급이면 대상 회사·현재 월 근태 기본채우기
+      if(clone.type==='variable' && targetCo===A.state.company){
+        const filled=A.fillDefaultAttendance(clone.id,false);
+        if(filled) A.saveMonthDebounced();
+      }
+    }
+    closeModal();
+    const coName=A.COMPANIES.find(c=>c.id===targetCo)?.name||'';
+    toast(`${coName}(으)로 ${cnt}명 복사되었습니다`);
+    if(targetCo!==A.state.company){
+      // 다른 회사로 복사한 경우 알림만 (현재 화면엔 변화 없음)
+    }
+  }catch(e){ toast('복사 실패'); console.error(e); }
+};
+// 특정 회사로 직원 저장 (복사용)
+async function saveEmployeeTo(coId, emp){
+  const {db,doc,setDoc}=window.__fb;
+  await setDoc(doc(db,'companies',coId,'employees',emp.id), emp);
+}
+
+// 변동급 직원의 별도 식대(meal)를 '기본급 포함 식대(mealIncluded)'로 일괄 전환
+window.migrateMeal = async function(){
+  const targets=A.state.employees.filter(e=>e.type==='variable' && A.num(e.meal)>0 && !A.num(e.mealIncluded));
+  if(!targets.length){
+    // 이미 mealIncluded 있는 직원 안내
+    const done=A.state.employees.filter(e=>e.type==='variable' && A.num(e.mealIncluded)>0);
+    toast(done.length? '이미 모두 전환되어 있습니다' : '전환할 변동급 직원이 없습니다');
+    return;
+  }
+  const names=targets.map(e=>`${e.name}(${A.won(e.meal)})`).join(', ');
+  if(!confirm(`변동급 ${targets.length}명의 별도 식대를 '기본급 포함 식대'로 전환합니다.\n\n${names}\n\n· 명세표에서 식대가 숨겨지고 기본급만 표시됩니다\n· 회계양식에서만 기본급과 식대가 분리됩니다\n· 급여계 총액은 변하지 않습니다\n\n진행할까요?`))return;
+  try{
+    for(const e of targets){
+      const upd={...e, mealIncluded:A.num(e.meal), meal:0};
+      await A.saveEmployee(upd);
+    }
+    toast(`${targets.length}명 전환 완료`);
+  }catch(e){ toast('전환 실패'); console.error(e); }
+};
+
+/* ========== 3. 근태현황 ========== */
+window.renderAtt = function(el){
+  const vars=A.state.employees.filter(e=>e.type==='variable');
+  const dim=daysInMonth(A.state.month);
+  const days=Array.from({length:dim},(_,i)=>i+1);
+  if(!vars.length){ el.innerHTML=`<div class="card"><div class="empty"><div class="big">◷</div><p>변동급 직원이 없습니다.<br>직원 관리에서 '변동급'으로 등록하면 여기서 근태를 입력합니다.</p><button class="btn primary" onclick="APP.go('emp')">직원 관리로</button></div></div>`; return; }
+
+  el.innerHTML=`
+  <div class="card">
+    <div class="card-h"><div><h3>${monthLabel(A.state.month)} 근태 입력</h3>
+      <div class="desc">월~금 근무 8h+잔업 2h, 토요일 주휴 8h 기본. 만근이면 209h로 기본급 고정, 결근하면 그 칸을 0/공란으로 두면 일할계산. 특근은 달력 또는 아래 표에서 입력.</div></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn primary" onclick="openHolidayModal()">📅 특근일 지정</button>
+        <button class="btn sm" onclick="openAttCopyModal()">📤 다른 회사로 복사</button>
+        <button class="btn sm" onclick="refillAll()">↻ 기본근무 다시 채우기</button>
+        <div class="legend"><span><span class="sw" style="background:var(--green-soft)"></span>자동계산 급여</span></div></div></div>
+    <div class="card-b flush"><div class="att-wrap"><table class="att-tbl">
+      <thead>
+        <tr><th class="empname l">성명</th><th class="rowlbl l">구분</th>
+          ${days.map(d=>{const dw=dowOf(A.state.month,d);return `<th class="c ${dw===0||dw===6?'wend':''}">${d}<br><span class="dow">${DOW[dw]}</span></th>`;}).join('')}
+          <th>합계<br><span class="dow">시간</span></th><th>단가</th><th>금액</th></tr>
+      </thead>
+      <tbody>
+      ${vars.map(e=>attRows(e,days)).join('')}
+      </tbody>
+    </table></div></div>
+  </div>`;
+  attachAttHandlers();
+};
+
+// 특근일 지정 팝업
+window.openHolidayModal = function(){
+  const vars=A.state.employees.filter(e=>e.type==='variable');
+  const box=document.getElementById('modalBox');
+  box.innerHTML=`
+    <div class="modal-h"><h3>${monthLabel(A.state.month)} 특근일 지정</h3><button class="x" onclick="closeHolidayModal()">×</button></div>
+    <div class="modal-b">
+      <p style="color:var(--ink2);margin-bottom:14px;font-size:13px">날짜를 클릭하면 전체 변동급 직원(${vars.length}명)의 특근에 8시간이 일괄 입력됩니다. 다시 누르면 해제됩니다.</p>
+      <div id="holCalHost">${holidayCalendar(vars)}</div>
+    </div>
+    <div class="modal-f"><button class="btn primary" onclick="closeHolidayModal()">완료</button></div>`;
+  document.getElementById('modalBg').classList.add('show');
+  attachCalendar(vars, true);
+};
+window.closeHolidayModal = function(){ closeModal(); A.render(); };
+
+/* 근태를 다른 회사로 복사 — 기준 직원의 실제 근태를 그대로 복사 */
+window.openAttCopyModal = function(){
+  const curCo=A.COMPANIES.find(c=>c.id===A.state.company);
+  const others=A.COMPANIES.filter(c=>c.id!==A.state.company);
+  const cur=A.state.month;
+  const vars=A.state.employees.filter(e=>e.type==='variable');
+  const months=[];
+  { const [y,m]=cur.split('-').map(Number);
+    for(let off=-2; off<=9; off++){ let yy=y,mm=m+off; while(mm<1){mm+=12;yy--;}while(mm>12){mm-=12;yy++;} months.push(`${yy}-${String(mm).padStart(2,'0')}`); } }
+  // 각 변동급 직원 근태 요약(평일/잔업/특근 시간)
+  const empSummary=e=>{const h=A.attHours(e.id); return `평일 ${h.weekday}h · 잔업 ${h.overtime}h · 특근 ${h.holiday}h`;};
+  const box=document.getElementById('modalBox');
+  box.innerHTML=`
+    <div class="modal-h"><h3>근태 복사</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-b">
+      <p style="color:var(--ink2);margin-bottom:6px;font-size:13px"><b>${curCo.name} · ${A.monthLabel(cur)}</b>에서 기준 직원 한 명을 골라, 그 직원의 근태를 대상 회사 변동급 직원 전원에게 복사합니다.</p>
+      <p style="color:var(--gray);margin-bottom:16px;font-size:12px">결근·중도입사 등 일할계산된 근태도 날짜 그대로 복사됩니다.</p>
+      ${vars.length? `
+      <div class="fld" style="margin-bottom:14px"><label>기준 직원 (이 사람의 근태를 복사)</label>
+        <select id="attcopy_src">${vars.map(e=>`<option value="${e.id}">${esc(e.name)||'미입력'} — ${empSummary(e)}</option>`).join('')}</select></div>
+      <div class="fld" style="margin-bottom:14px"><label>복사 대상 회사</label>
+        <select id="attcopy_co">${others.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
+      <div class="fld"><label>복사 대상 월</label>
+        <select id="attcopy_month">${months.map(m=>`<option value="${m}" ${m===cur?'selected':''}>${A.monthLabel(m)}${m===cur?' (같은 달)':''}</option>`).join('')}</select>
+        <div class="hint">대상 회사·월의 변동급 직원 근태가 기준 직원의 근태로 덮어쓰기됩니다.</div></div>
+      ` : '<p style="color:var(--red);font-size:13px">현재 회사에 변동급 직원이 없습니다.</p>'}
+    </div>
+    <div class="modal-f">
+      <button class="btn" onclick="closeModal()">취소</button>
+      ${vars.length?'<button class="btn primary" onclick="applyAttCopy()">복사</button>':''}
+    </div>`;
+  document.getElementById('modalBg').classList.add('show');
+};
+window.applyAttCopy = async function(){
+  const srcId=document.getElementById('attcopy_src').value;
+  const targetCo=document.getElementById('attcopy_co').value;
+  const targetMonth=document.getElementById('attcopy_month').value;
+  // 기준 직원 근태 추출 (날짜별 그대로)
+  const srcAtt=A.state.monthData.attendance[srcId]||{weekday:{},overtime:{},holiday:{}};
+  const pattern={
+    weekday:{...(srcAtt.weekday||{})},
+    overtime:{...(srcAtt.overtime||{})},
+    holiday:{...(srcAtt.holiday||{})}
+  };
+  const {db,doc,getDoc,setDoc,collection,getDocs}=window.__fb;
+  try{
+    const empSnap=await getDocs(collection(db,'companies',targetCo,'employees'));
+    const targetVars=[]; empSnap.forEach(d=>{const e={id:d.id,...d.data()}; if(e.type==='variable') targetVars.push(e);});
+    if(!targetVars.length){ toast('대상 회사에 변동급 직원이 없습니다'); return; }
+    const mref=doc(db,'companies',targetCo,'months',targetMonth);
+    const msnap=await getDoc(mref);
+    const mdata=msnap.exists()?msnap.data():{attendance:{},overrides:{},insurance:{},meta:{payDate:A.defaultPayDate(targetMonth)}};
+    mdata.attendance=mdata.attendance||{};
+    targetVars.forEach(e=>{ mdata.attendance[e.id]=JSON.parse(JSON.stringify(pattern)); });
+    mdata.meta=mdata.meta||{payDate:A.defaultPayDate(targetMonth)};
+    await setDoc(mref,mdata);
+    closeModal();
+    const coName=A.COMPANIES.find(c=>c.id===targetCo)?.name||'';
+    toast(`${coName} ${A.monthLabel(targetMonth)} 변동급 ${targetVars.length}명에 복사되었습니다`);
+  }catch(e){ toast('복사 실패'); console.error(e); }
+};
+
+// 특근 지정 달력: 전체 변동급 직원이 그 날 특근 8h면 '지정됨'
+function holidayCalendar(vars){
+  const m=A.state.month; const dim=daysInMonth(m);
+  const first=dowOf(m,1); // 1일 요일
+  const isHol=d=> vars.length>0 && vars.every(e=>{
+    const h=(A.state.monthData.attendance[e.id]||{}).holiday||{}; return A.parseNum(h[d])>0;
+  });
+  let cells='';
+  for(let i=0;i<first;i++) cells+=`<div class="calcell empty"></div>`;
+  for(let d=1;d<=dim;d++){
+    const dw=dowOf(m,d); const on=isHol(d);
+    const cls=['calcell']; if(dw===0)cls.push('sun'); if(dw===6)cls.push('sat'); if(on)cls.push('on');
+    cells+=`<div class="${cls.join(' ')}" data-day="${d}" role="button" tabindex="0">
+      <span class="cd">${d}</span>${on?'<span class="ch">특근 8h</span>':''}</div>`;
+  }
+  return `<div class="calwrap">
+    <div class="calhead">${DOW.map((w,i)=>`<div class="caldow ${i===0?'sun':i===6?'sat':''}">${w}</div>`).join('')}</div>
+    <div class="calgrid">${cells}</div>
+  </div>`;
+}
+function attachCalendar(vars, inModal){
+  document.querySelectorAll('.calcell[data-day]').forEach(cell=>{
+    const toggle=()=>{
+      const d=cell.dataset.day; const md=A.state.monthData;
+      const on = vars.length>0 && vars.every(e=>{const h=(md.attendance[e.id]||{}).holiday||{};return A.parseNum(h[d])>0;});
+      vars.forEach(e=>{
+        md.attendance[e.id]=md.attendance[e.id]||{weekday:{},overtime:{},holiday:{}};
+        md.attendance[e.id].holiday=md.attendance[e.id].holiday||{};
+        if(on) delete md.attendance[e.id].holiday[d]; else md.attendance[e.id].holiday[d]=8;
+      });
+      A.saveMonthDebounced();
+      if(inModal){
+        // 팝업 안에서는 달력만 다시 그림 (뒤 표는 완료 시 갱신)
+        const host=document.getElementById('holCalHost');
+        if(host){ host.innerHTML=holidayCalendar(vars); attachCalendar(vars, true); }
+      } else {
+        A.render();
+      }
+    };
+    cell.addEventListener('click',toggle);
+    cell.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();toggle();}});
+  });
+}
+/* 직원별 근무일(평일근무) 달력 팝업 — 연두=근무, 흰색=결근 */
+let _workdayDraft = null;
+window.openWorkdayModal = function(empId){
+  const e=A.state.employees.find(x=>x.id===empId); if(!e)return;
+  const wk=(A.state.monthData.attendance[empId]||{}).weekday||{};
+  const worked=new Set();
+  const dim=daysInMonth(A.state.month);
+  for(let d=1;d<=dim;d++){ if(A.parseNum(wk[d])>0) worked.add(d); }
+  _workdayDraft={empId, worked};
+  const box=document.getElementById('modalBox');
+  box.innerHTML=`
+    <div class="modal-h"><h3>${esc(e.name)||'직원'} · ${monthLabel(A.state.month)} 근무일</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-b">
+      <p style="color:var(--ink2);margin-bottom:6px;font-size:13px"><span style="display:inline-block;width:12px;height:12px;background:var(--green-soft);border:1px solid #bfe3ca;border-radius:3px;vertical-align:middle"></span> 연두색 = 평일근무한 날, 흰색 = 결근(미출근)</p>
+      <p style="color:var(--gray);margin-bottom:14px;font-size:12px">날짜를 클릭하면 연두 ↔ 흰색으로 바뀝니다. 확인을 누르면 흰색 날은 평일근무·잔업이 0으로 처리됩니다.</p>
+      <div id="wdCalHost">${workdayCalendar()}</div>
+    </div>
+    <div class="modal-f">
+      <button class="btn" onclick="closeModal()">취소</button>
+      <button class="btn primary" onclick="applyWorkday()">확인</button>
+    </div>`;
+  document.getElementById('modalBg').classList.add('show');
+  attachWorkdayCalendar();
+};
+function workdayCalendar(){
+  const m=A.state.month; const dim=daysInMonth(m); const first=dowOf(m,1);
+  const {worked}=_workdayDraft;
+  let cells='';
+  for(let i=0;i<first;i++) cells+=`<div class="calcell empty"></div>`;
+  for(let d=1;d<=dim;d++){
+    const dw=dowOf(m,d); const on=worked.has(d);
+    const cls=['calcell','wd']; if(dw===0)cls.push('sun'); if(dw===6)cls.push('sat'); if(on)cls.push('worked');
+    cells+=`<div class="${cls.join(' ')}" data-day="${d}" role="button" tabindex="0"><span class="cd">${d}</span></div>`;
+  }
+  return `<div class="calwrap">
+    <div class="calhead">${DOW.map((w,i)=>`<div class="caldow ${i===0?'sun':i===6?'sat':''}">${w}</div>`).join('')}</div>
+    <div class="calgrid">${cells}</div>
+  </div>`;
+}
+function attachWorkdayCalendar(){
+  document.querySelectorAll('#wdCalHost .calcell[data-day]').forEach(cell=>{
+    const toggle=()=>{
+      const d=parseInt(cell.dataset.day);
+      if(_workdayDraft.worked.has(d)) _workdayDraft.worked.delete(d); else _workdayDraft.worked.add(d);
+      document.getElementById('wdCalHost').innerHTML=workdayCalendar();
+      attachWorkdayCalendar();
+    };
+    cell.addEventListener('click',toggle);
+    cell.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();toggle();}});
+  });
+}
+window.applyWorkday = function(){
+  const {empId,worked}=_workdayDraft;
+  const md=A.state.monthData; const dim=daysInMonth(A.state.month);
+  md.attendance[empId]=md.attendance[empId]||{weekday:{},overtime:{},holiday:{}};
+  const att=md.attendance[empId];
+  att.weekday=att.weekday||{}; att.overtime=att.overtime||{};
+  for(let d=1;d<=dim;d++){
+    if(worked.has(d)){
+      if(!A.parseNum(att.weekday[d])) att.weekday[d]=8; // 근무: 8h (기존값 유지)
+    } else {
+      delete att.weekday[d]; // 결근: 평일근무·잔업 0
+      delete att.overtime[d];
+    }
+  }
+  A.saveMonthDebounced(); closeModal(); A.render();
+  toast('근무일이 반영되었습니다');
+};
+
+function attRows(e,days){
+  const a=A.state.monthData.attendance[e.id]||{weekday:{},overtime:{},holiday:{}};
+  const c=A.calcEmp(e); const h=c.pay._hours||{weekday:0,overtime:0,holiday:0};
+  const rate=e.hourlyRate||0, otR=Math.round(rate*(e.otMult??1.5)), holR=Math.round(rate*(e.holMult??1.5));
+  const cell=(kind,d,val)=>`<td class="dcell ${(dowOf(A.state.month,d)%6===0)?'wend':''}"><input data-emp="${e.id}" data-kind="${kind}" data-day="${d}" value="${val||''}" inputmode="numeric"></td>`;
+  const line=(kind,label,dayObj,tot,rateV,amt,badge)=>`<tr class="${label==='평일근무'?'empstart':''}">
+    ${label==='평일근무'?`<td class="empname l empclick" rowspan="3" onclick="openWorkdayModal('${e.id}')" title="클릭하면 근무일 달력">${esc(e.name)||'미입력'} <span style="font-size:9px;color:var(--accent)">📅</span></td>`:''}
+    <td class="rowlbl l">${label}${badge||''}</td>
+    ${days.map(d=>cell(kind,d,dayObj[d])).join('')}
+    <td class="calc">${tot||0}</td><td class="muted">${won(rateV)}</td><td class="calc">${won(amt)}</td>
+  </tr>`;
+  // 평일근무: 만근이면 기준시간(209) 표시, 아니면 실제 입력시간
+  const wkTot = c.pay._full ? c.pay._stdMonth : h.weekday;
+  const wkBadge = c.pay._full
+    ? ' <span class="tag" style="background:var(--green-soft);color:#0a6b3d">만근 209h</span>'
+    : ' <span class="tag" style="background:var(--amber-soft);color:#8a4b00">일할 '+h.weekday+'h</span>';
+  return line('weekday','평일근무',a.weekday||{},wkTot,rate,c.pay.base,wkBadge)
+       + line('overtime','잔업시간',a.overtime||{},h.overtime,otR,c.pay.ot)
+       + line('holiday','특근시간',a.holiday||{},h.holiday,holR,c.pay.hol);
+}
+function attachAttHandlers(){
+  document.querySelectorAll('.att-tbl input').forEach(inp=>{
+    inp.addEventListener('change',()=>{
+      const {emp,kind,day}=inp.dataset;
+      const md=A.state.monthData;
+      md.attendance[emp]=md.attendance[emp]||{weekday:{},overtime:{},holiday:{}};
+      md.attendance[emp][kind]=md.attendance[emp][kind]||{};
+      const v=parseNum(inp.value);
+      if(v) md.attendance[emp][kind][day]=v; else delete md.attendance[emp][kind][day];
+      A.saveMonthDebounced();
+      A.render(); // 재계산 반영
+    });
+  });
+}
+window.refillAll = function(){
+  const vars=A.state.employees.filter(e=>e.type==='variable');
+  if(!confirm(`${monthLabel(A.state.month)} 변동급 ${vars.length}명의 평일근무·잔업을 기본값(월~금 8h+2h)으로 다시 채웁니다.\n토요일 특근 입력은 유지됩니다. 진행할까요?`))return;
+  vars.forEach(e=>A.fillDefaultAttendance(e.id,true));
+  A.saveMonthDebounced(); A.render(); toast('기본근무를 다시 채웠습니다');
+};
+
+/* 공통 유틸 */
+function esc(s){return String(s??'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));}
+window.__esc=esc;
+function attachWonFormat(){
+  document.querySelectorAll('.wonf').forEach(inp=>{
+    inp.addEventListener('blur',()=>{const v=parseNum(inp.value); inp.value=v?v.toLocaleString('ko-KR'):'';});
+    inp.addEventListener('focus',()=>{const v=parseNum(inp.value); inp.value=v||'';});
+  });
+}
+window.__attachWonFormat=attachWonFormat;
+
+})();
+
+(function(){
+/* ===== 페이지 렌더러 2 ===== */
+const A2 = window.APP;
+const {won,wonInput,parseNum,num,toast,monthLabel}=A2;
+const esc=window.__esc;
+
+function allCalc2(){ return A2.state.employees.map(e=>({emp:e,c:A2.calcEmp(e)})); }
+function coName(){ const c=A2.COMPANIES.find(x=>x.id===A2.state.company); return c?c.name:''; }
+
+/* 엑셀식 셀 이동: 입력칸에 Tab/화살표/Enter 네비게이션 부착.
+   각 input에 data-row(행 인덱스), data-col(열 인덱스)이 있으면 좌표 기반으로 정확히 이동.
+   없으면 표시 순서(DOM 순서)로 이동. */
+function attachGridNav(inputs){
+  if(!inputs.length) return;
+  const hasCoord = inputs[0].dataset.row!==undefined && inputs[0].dataset.col!==undefined;
+  const focusEl=el=>{ if(el){ el.focus(); el.select&&el.select(); } };
+  if(hasCoord){
+    // 좌표 맵 구성
+    const map={}; let maxRow=0, maxCol=0;
+    inputs.forEach(inp=>{ const r=+inp.dataset.row, c=+inp.dataset.col; map[r+':'+c]=inp; if(r>maxRow)maxRow=r; if(c>maxCol)maxCol=c; });
+    const find=(r,c,dr,dc)=>{ // r,c에서 dr,dc 방향으로 다음 존재하는 셀
+      let nr=r+dr, nc=c+dc;
+      for(let guard=0; guard<200; guard++){
+        if(nc>maxCol){ nc=0; nr++; } if(nc<0){ nc=maxCol; nr--; }
+        if(nr<0||nr>maxRow) return null;
+        if(map[nr+':'+nc]) return map[nr+':'+nc];
+        nc+=dc||1; if(dr&&!dc){ // 상하 이동인데 그 열이 비었으면 같은 열 계속
+          nr+=dr; nc=c; if(nr<0||nr>maxRow) return null; if(map[nr+':'+nc]) return map[nr+':'+nc]; continue; }
+      }
+      return null;
+    };
+    inputs.forEach(inp=>{
+      inp.addEventListener('keydown',ev=>{
+        const r=+inp.dataset.row, c=+inp.dataset.col; let t=null;
+        if(ev.key==='Enter'){ t=find(r,c,ev.shiftKey?-1:1,0); }
+        else if(ev.key==='Tab'){ t=find(r,c,0,ev.shiftKey?-1:1); }
+        else if(ev.key==='ArrowDown'){ t=find(r,c,1,0); }
+        else if(ev.key==='ArrowUp'){ t=find(r,c,-1,0); }
+        else if(ev.key==='ArrowRight'){ if(inp.selectionStart===inp.value.length) t=find(r,c,0,1); }
+        else if(ev.key==='ArrowLeft'){ if(inp.selectionStart===0) t=find(r,c,0,-1); }
+        else return;
+        if(t){ ev.preventDefault(); inp.blur(); focusEl(t); }
+      });
+    });
+  } else {
+    inputs.forEach((inp,idx)=>{
+      inp.addEventListener('keydown',ev=>{
+        let t=null;
+        if(ev.key==='Enter'||ev.key==='Tab'){ t=idx+((ev.shiftKey)?-1:1); }
+        else if(ev.key==='ArrowRight'){ if(inp.selectionStart===inp.value.length) t=idx+1; }
+        else if(ev.key==='ArrowLeft'){ if(inp.selectionStart===0) t=idx-1; }
+        else return;
+        if(t!==null && t>=0 && t<inputs.length){ ev.preventDefault(); inp.blur(); focusEl(inputs[t]); }
+      });
+    });
+  }
+}
+// 회계 전달용 지급항목: 변동급이면서 '기본급 포함 식대'가 있으면 기본급에서 식대를 분리.
+// 단, 기본급이 분리할 식대(inc) 이상일 때만 분리한다. 기본급 < inc(0 포함)이면 분리 안 함.
+function exportPay(emp,c){
+  const p={}; A2.PAY_ITEMS.forEach(it=>p[it.k]=c.pay[it.k]||0);
+  const inc=A2.num(emp.mealIncluded);
+  const base=c.pay.base||0;
+  if(emp.type==='variable' && inc>0 && base>=inc){
+    p.base = base - inc;        // 기본급에서 식대 빼기 (기본급 ≥ 식대일 때만)
+    p.meal = (p.meal||0) + inc; // 식대로 이동 (합계 불변)
+  }
+  return p;
+}
+// 연말정산용 차액 = (건강 명세−고지) + (장기요양 명세−고지). 명세가 크면 양수.
+// 연말정산 적립분 = 건강·장기요양 각각 (명세−고지), 항목별로 음수면 0(적립 하한).
+// 음수(고지>명세)인 항목은 신규 적립 없이 기존 적립금에서 상계되므로 회계전달엔 0으로 넘긴다.
+function yearEndAdjust(emp,c){
+  const md=A2.state.monthData; const ins=md.insurance[emp.id]||{};
+  let adj=0;
+  ['health','care'].forEach(k=>{
+    if(!emp['ins_'+k]) return;
+    const ded=c.ded[k]||0;
+    const noticed=A2.insWorkerShare(k, A2.num(ins[k])); // 근로자부담분(건강·요양은 비율1)
+    const itemDiff = ded - noticed;                     // 명세 − 고지
+    if(itemDiff>0) adj += itemDiff;                     // 항목별 하한 0: 양수만 신규 적립
+  });
+  return adj;
+}
+
+/* ========== 4. 급여대장 ========== */
+window.renderLedger = function(el){
+  const rows=allCalc2();
+  const md=A2.state.monthData;
+  // 합계
+  const g={gross:0,totDed:0,net:0,pay:{},ded:{}};
+  A2.PAY_ITEMS.forEach(it=>g.pay[it.k]=0); A2.DEDUCT_KEYS.forEach(k=>g.ded[k]=0);
+  rows.forEach(({c})=>{g.gross+=c.gross;g.totDed+=c.totDed;g.net+=c.net;
+    A2.PAY_ITEMS.forEach(it=>g.pay[it.k]+=c.pay[it.k]||0); A2.DEDUCT_KEYS.forEach(k=>g.ded[k]+=c.ded[k]||0);});
+
+  el.innerHTML=`
+  <div class="card">
+    <div class="card-h"><div><h3>${monthLabel(A2.state.month)} 급여대장</h3>
+      <div class="desc">변동급은 근태에서 자동, 세금·공제는 셀을 직접 수정하면 월별로 저장됩니다 (직원 기본값 위에 덮어씀)</div></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn sm" onclick="openDedForwardModal()">📌 이후 달에 공제 적용</button>
+        <label style="font-size:12px;color:#666">지급일 <input type="date" id="payDate" value="${md.meta.payDate||''}" style="border:1px solid var(--line);border-radius:6px;padding:4px 8px"></label>
+      </div></div>
+    <div class="card-b flush"><div class="tbl-wrap"><table class="fit">
+      <thead>
+        <tr><th class="c" rowspan="2">순번</th><th class="l" rowspan="2">성명</th><th class="l" rowspan="2">직책</th>
+          <th class="grp-pay" colspan="${A2.PAY_ITEMS.length+1}">급여 내역</th>
+          <th class="grp-ded grp-start" colspan="${A2.DEDUCT_KEYS.length+1}">공제 내역</th>
+          <th class="grp-net grp-start" rowspan="2">차감<br>지급액</th></tr>
+        <tr>${A2.PAY_ITEMS.map(it=>`<th class="grp-pay">${it.t}</th>`).join('')}<th class="grp-pay sumcol">급여계</th>
+          ${A2.DEDUCT_KEYS.map((k,di)=>`<th class="grp-ded${di===0?' grp-start':''}">${A2.DEDUCT_LABEL[k].replace('보험','').replace('소득세','세')}</th>`).join('')}<th class="grp-ded sumcol">공제계</th></tr>
+      </thead>
+      <tbody>
+      ${rows.map(({emp,c},i)=>{
+        const ov=md.overrides[emp.id]||{};
+        let col=0;
+        return `<tr>
+        <td class="c muted">${i+1}</td>
+        <td class="name l">${esc(emp.name)||'-'}</td><td class="l muted">${esc(emp.title||'')}</td>
+        ${A2.PAY_ITEMS.map(it=>{
+          const auto = emp.type==='variable' && ['base','ot','hol'].includes(it.k);
+          return auto
+            ? `<td class="cell-pay muted" title="근태 자동계산">${won(c.pay[it.k])}</td>`
+            : `<td class="cell-pay edit"><input value="${wonInput(c.pay[it.k])}" data-emp="${emp.id}" data-fld="pay_${it.k}" data-row="${i}" data-col="${col++}" inputmode="numeric"></td>`;
+        }).join('')}
+        <td class="cell-pay sumcol cell-gross"><b>${won(c.gross)}</b></td>
+        ${A2.DEDUCT_KEYS.map((k,di)=>`<td class="cell-ded edit${di===0?' grp-start':''}"><input value="${wonInput(c.ded[k])}" data-emp="${emp.id}" data-fld="ded_${k}" data-row="${i}" data-col="${col++}" inputmode="numeric"></td>`).join('')}
+        <td class="cell-ded sumcol cell-totded"><b>${won(c.totDed)}</b></td>
+        <td class="cell-net grp-start"><b>${won(c.net)}</b></td>
+      </tr>`;}).join('')||`<tr><td colspan="20"><div class="empty"><p>직원을 먼저 등록하세요.</p></div></td></tr>`}
+      </tbody>
+      <tfoot><tr class="sum">
+        <td colspan="3" class="l">합계</td>
+        ${A2.PAY_ITEMS.map(it=>`<td class="cell-pay">${won(g.pay[it.k])}</td>`).join('')}<td class="cell-pay sumcol">${won(g.gross)}</td>
+        ${A2.DEDUCT_KEYS.map((k,di)=>`<td class="cell-ded${di===0?' grp-start':''}">${won(g.ded[k])}</td>`).join('')}<td class="cell-ded sumcol">${won(g.totDed)}</td>
+        <td class="cell-net grp-start">${won(g.net)}</td></tr></tfoot>
+    </table></div></div>
+  </div>`;
+
+  // 핸들러
+  document.getElementById('payDate').addEventListener('change',e=>{md.meta.payDate=e.target.value;A2.saveMonthDebounced();});
+  const ledInputs=[...el.querySelectorAll('td.edit input')];
+  ledInputs.forEach(inp=>{
+    inp.addEventListener('blur',()=>{const v=parseNum(inp.value);inp.value=v?v.toLocaleString('ko-KR'):'';});
+    inp.addEventListener('focus',()=>{const v=parseNum(inp.value);inp.value=v||'';});
+    inp.addEventListener('change',()=>{
+      const {emp,fld}=inp.dataset;
+      md.overrides[emp]=md.overrides[emp]||{};
+      const v=inp.value.trim();
+      // 입력칸이 있는 항목은 모두 수동(공제 + 수동 지급항목). 빈칸이면 0으로 처리(기본값 복귀 X).
+      // 변동급 근태 자동항목(기본급·잔업·특근)은 애초에 입력칸이 없어 여기 오지 않음.
+      if(v==='') md.overrides[emp][fld]=0;
+      else md.overrides[emp][fld]=parseNum(v);
+      // 갑근세 입력/삭제 시 지방소득세 = 갑근세 × 10%, 10원 절사
+      if(fld==='ded_gap'){
+        const gap=parseNum(v);
+        md.overrides[emp]['ded_local'] = gap>0 ? Math.floor(gap*0.1/10)*10 : 0;
+        const localInp=el.querySelector(`input[data-emp="${emp}"][data-fld="ded_local"]`);
+        if(localInp && document.activeElement!==localInp){ const lv=md.overrides[emp]['ded_local']; localInp.value = lv? lv.toLocaleString('ko-KR'):''; }
+      }
+      A2.saveMonthDebounced();
+      updateLedgerRow(el, emp); // 해당 행 파생값 + 합계만 갱신
+    });
+  });
+  attachGridNav(ledInputs);
+};
+// 급여대장: 한 직원 행의 파생값(급여계·공제계·실지급)과 합계 행 갱신 (전체 재렌더 없이)
+function updateLedgerRow(el, empId){
+  const emp=A2.state.employees.find(e=>e.id===empId); if(!emp) return;
+  const c=A2.calcEmp(emp);
+  const rowInput=el.querySelector(`input[data-emp="${empId}"]`);
+  const tr=rowInput?rowInput.closest('tr'):null;
+  if(tr){
+    const g=tr.querySelector('.cell-gross b'); if(g) g.textContent=won(c.gross);
+    const td=tr.querySelector('.cell-totded b'); if(td) td.textContent=won(c.totDed);
+    const n=tr.querySelector('.cell-net b'); if(n) n.textContent=won(c.net);
+    // 자동계산 지급항목(변동급 기본급/잔업/특근)도 갱신될 수 있으나 여기선 공제 편집이므로 급여계만
+  }
+  updateLedgerFoot(el);
+}
+function updateLedgerFoot(el){
+  const rows=A2.state.employees.map(e=>({emp:e,c:A2.calcEmp(e)}));
+  const g={gross:0,totDed:0,net:0,pay:{},ded:{}}; A2.PAY_ITEMS.forEach(it=>g.pay[it.k]=0); A2.DEDUCT_KEYS.forEach(k=>g.ded[k]=0);
+  rows.forEach(({c})=>{g.gross+=c.gross;g.totDed+=c.totDed;g.net+=c.net; A2.PAY_ITEMS.forEach(it=>g.pay[it.k]+=c.pay[it.k]||0); A2.DEDUCT_KEYS.forEach(k=>g.ded[k]+=c.ded[k]||0);});
+  const foot=el.querySelector('tfoot tr'); if(!foot) return;
+  const tds=[...foot.querySelectorAll('td')];
+  // [합계라벨(colspan3), pay..., 급여계, ded..., 공제계, 실지급]
+  let idx=1;
+  A2.PAY_ITEMS.forEach(it=>{ if(tds[idx]) tds[idx].textContent=won(g.pay[it.k]); idx++; });
+  if(tds[idx]) tds[idx].textContent=won(g.gross); idx++;
+  A2.DEDUCT_KEYS.forEach(k=>{ if(tds[idx]) tds[idx].textContent=won(g.ded[k]); idx++; });
+  if(tds[idx]) tds[idx].textContent=won(g.totDed); idx++;
+  if(tds[idx]) tds[idx].textContent=won(g.net);
+}
+
+/* 이후 12개월에 공제 적용 — 현재 달 각 직원의 실제 공제값을 이후 달 override로 저장 */
+window.openDedForwardModal = function(){
+  const cur=A2.state.month;
+  const rows=A2.state.employees;
+  // 미리보기: 현재 달 각 직원 실제 공제
+  const preview=rows.map(e=>{
+    const c=A2.calcEmp(e);
+    return {name:e.name, ded:c.ded};
+  });
+  const box=document.getElementById('modalBox');
+  box.innerHTML=`
+    <div class="modal-h"><h3>이후 달에 공제 적용</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-b">
+      <p style="color:var(--ink2);margin-bottom:6px;font-size:13px"><b>${A2.monthLabel(cur)}</b>의 전 직원 공제 내역을 선택한 기간에 동일하게 적용합니다.</p>
+      <p style="color:var(--gray);margin-bottom:14px;font-size:12px">건강보험·국민연금 등이 이 달부터 바뀌었을 때, 한 번에 이후 달까지 반영됩니다. 급여·지급 항목은 복사되지 않고 <b>공제 내역만</b> 복사됩니다.</p>
+      <div class="fld" style="margin-bottom:8px"><label>적용 범위</label>
+        <div style="display:flex;gap:14px;margin-top:4px">
+          <label class="checkrow" style="padding:0"><input type="radio" name="fwdmode" value="12" checked onchange="toggleFwdRange()"> <span>이후 12개월</span></label>
+          <label class="checkrow" style="padding:0"><input type="radio" name="fwdmode" value="until" onchange="toggleFwdRange()"> <span>끝나는 달 지정</span></label>
+        </div>
+      </div>
+      <div class="fld" id="fwdUntilBox" style="display:none;margin-bottom:12px"><label>~ 이 달까지 적용</label>
+        <select id="fwd_until">${(function(){let opts='';for(let off=1;off<=36;off++){const m=nextMonth(cur,off);opts+=`<option value="${m}">${A2.monthLabel(m)}</option>`;}return opts;})()}</select>
+        <div class="hint">${A2.monthLabel(nextMonth(cur,1))}부터 선택한 달까지 적용됩니다.</div></div>
+      <div class="tbl-wrap" style="max-height:200px;overflow-y:auto;border:1px solid var(--line);border-radius:8px">
+        <table style="font-size:11.5px">
+          <thead><tr><th class="l">성명</th>${A2.DEDUCT_KEYS.map(k=>`<th>${A2.DEDUCT_LABEL[k].replace('보험','').replace('소득세','세')}</th>`).join('')}</tr></thead>
+          <tbody>${preview.map(p=>`<tr><td class="name l">${esc(p.name)||'-'}</td>${A2.DEDUCT_KEYS.map(k=>`<td>${won(p.ded[k]||0)}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table>
+      </div>
+      <p style="color:var(--gray);margin-top:10px;font-size:11.5px">※ 대상 달에 이미 직접 입력해둔 공제가 있으면 덮어쓰기됩니다.</p>
+    </div>
+    <div class="modal-f">
+      <button class="btn" onclick="closeModal()">취소</button>
+      <button class="btn primary" onclick="applyDedForward()">적용</button>
+    </div>`;
+  document.getElementById('modalBg').classList.add('show');
+};
+window.toggleFwdRange = function(){
+  const mode=document.querySelector('input[name="fwdmode"]:checked').value;
+  document.getElementById('fwdUntilBox').style.display = mode==='until'?'block':'none';
+};
+function nextMonth(m, off){
+  let [y,mm]=m.split('-').map(Number); mm+=off;
+  while(mm<1){mm+=12;y--;} while(mm>12){mm-=12;y++;}
+  return `${y}-${String(mm).padStart(2,'0')}`;
+}
+window.applyDedForward = async function(){
+  const cur=A2.state.month;
+  const rows=A2.state.employees;
+  // 적용 범위 계산
+  const mode=document.querySelector('input[name="fwdmode"]:checked').value;
+  let months=[];
+  if(mode==='until'){
+    const until=document.getElementById('fwd_until').value;
+    for(let off=1; off<=36; off++){ const m=nextMonth(cur,off); months.push(m); if(m===until) break; }
+  } else {
+    for(let off=1; off<=12; off++){ months.push(nextMonth(cur,off)); }
+  }
+  // 현재 달 각 직원 실제 공제값 수집
+  const dedByEmp={};
+  rows.forEach(e=>{ const c=A2.calcEmp(e); dedByEmp[e.id]={}; A2.DEDUCT_KEYS.forEach(k=>{ dedByEmp[e.id][k]=c.ded[k]||0; }); });
+  const {db,doc,getDoc,setDoc}=window.__fb;
+  try{
+    for(const m of months){
+      const ref=doc(db,'companies',A2.state.company,'months',m);
+      const snap=await getDoc(ref);
+      const data=snap.exists()?snap.data():{attendance:{},overrides:{},insurance:{},meta:{payDate:A2.defaultPayDate(m)}};
+      data.overrides=data.overrides||{};
+      rows.forEach(e=>{
+        data.overrides[e.id]=data.overrides[e.id]||{};
+        A2.DEDUCT_KEYS.forEach(k=>{ data.overrides[e.id]['ded_'+k]=dedByEmp[e.id][k]; });
+      });
+      data.meta=data.meta||{payDate:A2.defaultPayDate(m)};
+      await setDoc(ref,data);
+    }
+    closeModal();
+    toast(`${months.length}개 달에 공제가 적용되었습니다`);
+  }catch(e){ toast('적용 실패'); console.error(e); }
+};
+
+/* ========== 5. 4대보험 고지 ========== */
+window.renderIns = function(el){
+  const md=A2.state.monthData; const emps=A2.state.employees;
+  const gIn={}, gTot={}, gWorker={}; A2.INS_KEYS.forEach(k=>{gIn[k]=0;gTot[k]=0;gWorker[k]=0;}); let gInAll=0, gTotAll=0;
+  el.innerHTML=`
+  <div class="card">
+    <div class="card-h"><div><h3>${monthLabel(A2.state.month)} 4대보험 실제 고지액</h3>
+      <div class="desc">공단 고지서에 적힌 금액 그대로 입력하세요 · 건강·장기요양은 고지서가 <b>근로자분(50%)</b>만 표기 · 국민연금·고용·산재는 <b>100% 총액</b> 표기 · 맨 아래 <b>직원 합계</b>(근로자 부담)와 <b>회사 합계</b>(회사부담 포함 100%)로 구분됩니다</div></div>
+      <button class="btn primary" onclick="openInsBulkModal()">📋 여러 달에 일괄 적용</button></div>
+    <div class="card-b flush"><div class="tbl-wrap"><table class="fit">
+      <thead><tr><th class="c">순번</th><th class="l">성명</th>
+        ${A2.INS_KEYS.map(k=>{
+          const cfg=A2.INS_CONFIG[k];
+          const tag = cfg.input==='half'?'50% 표기': (k==='injury'?'회사부담':'100% 표기');
+          const note = `<span style="font-weight:400;font-size:10px;color:#888"><br>${tag}</span>`;
+          return `<th>${A2.INS_LABEL[k]}${note}</th>`;
+        }).join('')}<th class="sumcol">입력 합계</th></tr></thead>
+      <tbody>
+      ${emps.map((e,i)=>{
+        const ins=md.insurance[e.id]||{}; let sub=0;
+        const cells=A2.INS_KEYS.map((k,ci)=>{
+          const enrolled = k==='injury' ? true : e['ins_'+k];
+          if(!enrolled) return `<td class="zero c">미가입</td>`;
+          const v=num(ins[k]); sub+=v;
+          gIn[k]+=v; gTot[k]+=A2.insTotalAmount(k,v);
+          const workerShare = (k==='emp' && e.empFull) ? 0 : A2.insWorkerShare(k,v);
+          gWorker[k]+=workerShare;
+          // 100% 표기 항목은 () 안에 직원부담 표시: 국민연금=고지×50%, 고용보험=고지×0.9/2.05
+          let note='';
+          if(A2.INS_CONFIG[k] && A2.INS_CONFIG[k].input==='full' && k!=='injury'){
+            if(k==='emp' && e.empFull){ note=`<div class="wnote">회사전액</div>`; }
+            else { note=`<div class="wnote">직원 ${won(A2.insWorkerShare(k, v))}</div>`; }
+          }
+          return `<td class="edit"><input value="${wonInput(ins[k])}" data-emp="${e.id}" data-ins="${k}" data-row="${i}" data-col="${ci}" inputmode="numeric">${note}</td>`;
+        }).join(''); gInAll+=sub;
+        return `<tr><td class="c muted">${i+1}</td><td class="name l">${esc(e.name)||'-'}</td>${cells}<td class="sumcol"><b>${won(sub)}</b></td></tr>`;
+      }).join('')||`<tr><td colspan="9"><div class="empty"><p>직원을 먼저 등록하세요.</p></div></td></tr>`}
+      </tbody>
+      <tfoot>
+        <tr class="sum"><td colspan="2" class="l">직원 합계 <span style="font-weight:400;font-size:10px;color:#888">(근로자 부담)</span></td>
+          ${A2.INS_KEYS.map(k=>`<td>${won(gWorker[k])}</td>`).join('')}
+          <td class="sumcol">${won(A2.INS_KEYS.reduce((s,k)=>s+gWorker[k],0))}</td></tr>
+        <tr class="sum" style="background:#e8f1ff"><td colspan="2" class="l">회사 합계 <span style="font-weight:400;font-size:10px;color:#555">(회사부담 포함 100%)</span></td>
+          ${A2.INS_KEYS.map(k=>{gTotAll+=gTot[k]; return `<td>${won(gTot[k])}</td>`;}).join('')}
+          <td class="sumcol"><b>${won(gTotAll)}</b></td></tr>
+      </tfoot>
+    </table></div></div>
+  </div>`;
+  const insInputs=[...el.querySelectorAll('td.edit input')];
+  insInputs.forEach(inp=>{
+    inp.addEventListener('blur',()=>{const v=parseNum(inp.value);inp.value=v?v.toLocaleString('ko-KR'):'';});
+    inp.addEventListener('focus',()=>{const v=parseNum(inp.value);inp.value=v||'';});
+    inp.addEventListener('change',()=>{
+      const {emp,ins}=inp.dataset; md.insurance[emp]=md.insurance[emp]||{};
+      const v=parseNum(inp.value); if(v)md.insurance[emp][ins]=v; else delete md.insurance[emp][ins];
+      A2.saveMonthDebounced(); updateInsTotals(el); // 전체 재렌더 대신 합계만 갱신
+    });
+  });
+  attachGridNav(insInputs);
+};
+// 4대보험 고지: 합계 두 줄만 다시 계산해 갱신 (커서 유지)
+function updateInsTotals(el){
+  const md=A2.state.monthData; const emps=A2.state.employees;
+  const gIn={}, gTot={}, gWorker={}; A2.INS_KEYS.forEach(k=>{gIn[k]=0;gTot[k]=0;gWorker[k]=0;});
+  emps.forEach(e=>{ const ins=md.insurance[e.id]||{};
+    A2.INS_KEYS.forEach(k=>{ const enrolled=k==='injury'?true:e['ins_'+k]; if(!enrolled)return;
+      const v=num(ins[k]); gIn[k]+=v; gTot[k]+=A2.insTotalAmount(k,v);
+      gWorker[k]+=(k==='emp'&&e.empFull)?0:A2.insWorkerShare(k,v);
+    });
+  });
+  const foot=el.querySelectorAll('tfoot tr');
+  if(foot.length>=2){
+    const wc=foot[0].querySelectorAll('td'); // [라벨(colspan2), k..., 합계]
+    A2.INS_KEYS.forEach((k,i)=>{ if(wc[i+1]) wc[i+1].textContent=won(gWorker[k]); });
+    if(wc[wc.length-1]) wc[wc.length-1].textContent=won(A2.INS_KEYS.reduce((s,k)=>s+gWorker[k],0));
+    const cc=foot[1].querySelectorAll('td'); let tot=0;
+    A2.INS_KEYS.forEach((k,i)=>{ if(cc[i+1]) cc[i+1].textContent=won(gTot[k]); tot+=gTot[k]; });
+    if(cc[cc.length-1]) cc[cc.length-1].innerHTML='<b>'+won(tot)+'</b>';
+  }
+  // 입력 합계(각 행 마지막 칸)도 갱신 + 100% 항목 () 직원부담 갱신
+  emps.forEach((e,ri)=>{ const ins=md.insurance[e.id]||{}; let sub=0; A2.INS_KEYS.forEach(k=>{ if((k==='injury'?true:e['ins_'+k])) sub+=num(ins[k]); });
+    const row=el.querySelectorAll('tbody tr')[ri]; if(row){ const tds=row.querySelectorAll('td'); const last=tds[tds.length-1]; if(last) last.innerHTML='<b>'+won(sub)+'</b>';
+      // 국민연금·고용보험 () 갱신 (고지값 기반)
+      A2.INS_KEYS.forEach(k=>{
+        if(A2.INS_CONFIG[k] && A2.INS_CONFIG[k].input==='full' && k!=='injury'){
+          const inp=row.querySelector(`input[data-ins="${k}"]`);
+          if(inp){ const note=inp.parentElement.querySelector('.wnote');
+            if(note){
+              if(k==='emp' && e.empFull) note.textContent='회사전액';
+              else note.textContent='직원 '+won(A2.insWorkerShare(k, num(ins[k])));
+            }
+          }
+        }
+      });
+    }
+  });
+}
+function insColCount_unused(){}
+
+/* 4대보험 고지액 여러 달 일괄 적용 */
+function monthList(centerMonth, before, after){
+  const [y,m]=centerMonth.split('-').map(Number);
+  const arr=[];
+  for(let off=-before; off<=after; off++){
+    let yy=y, mm=m+off;
+    while(mm<1){mm+=12;yy--;} while(mm>12){mm-=12;yy++;}
+    arr.push(`${yy}-${String(mm).padStart(2,'0')}`);
+  }
+  return arr;
+}
+window.openInsBulkModal = function(){
+  const cur=A2.state.month;
+  const curIns=A2.state.monthData.insurance||{};
+  const hasData=Object.keys(curIns).length>0;
+  const months=monthList(cur, 2, 9); // 2개월 전 ~ 9개월 후
+  const box=document.getElementById('modalBox');
+  box.innerHTML=`
+    <div class="modal-h"><h3>4대보험 고지액 일괄 적용</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-b">
+      <p style="color:var(--ink2);margin-bottom:6px;font-size:13px"><b>${A2.monthLabel(cur)}</b>에 입력한 고지액을 아래 선택한 달들에 그대로 복사합니다.</p>
+      ${hasData?'':'<p style="color:var(--red);font-size:12px;margin-bottom:10px">⚠️ 현재 달에 입력된 고지액이 없습니다. 먼저 이번 달을 입력하세요.</p>'}
+      <p style="color:var(--gray);margin-bottom:14px;font-size:12px">선택한 달의 기존 고지액은 덮어쓰기됩니다.</p>
+      <div class="monthpick">
+        ${months.map(m=>{
+          const isCur=m===cur;
+          return `<label class="mpick ${isCur?'cur':''}">
+            <input type="checkbox" value="${m}" ${isCur?'disabled':''}>
+            <span>${A2.monthLabel(m)}${isCur?' (현재)':''}</span></label>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn" onclick="closeModal()">취소</button>
+      <button class="btn primary" ${hasData?'':'disabled'} onclick="applyInsBulk()">선택한 달에 적용</button>
+    </div>`;
+  document.getElementById('modalBg').classList.add('show');
+};
+window.applyInsBulk = async function(){
+  const cur=A2.state.month;
+  const curInsurance=JSON.parse(JSON.stringify(A2.state.monthData.insurance||{}));
+  const curMeta=A2.state.monthData.meta||{};
+  const checks=[...document.querySelectorAll('.monthpick input:checked')].map(c=>c.value);
+  if(!checks.length){ toast('적용할 달을 선택하세요'); return; }
+  const {db,doc,getDoc,setDoc}=window.__fb;
+  try{
+    for(const m of checks){
+      // 대상 달 기존 데이터 로드 (근태·overrides는 보존, insurance만 교체)
+      const ref=doc(db,'companies',A2.state.company,'months',m);
+      const snap=await getDoc(ref);
+      const data=snap.exists()?snap.data():{attendance:{},overrides:{},insurance:{},meta:{payDate:A2.defaultPayDate(m)}};
+      data.insurance=JSON.parse(JSON.stringify(curInsurance));
+      data.meta=data.meta||{payDate:A2.defaultPayDate(m)};
+      await setDoc(ref,data);
+    }
+    closeModal();
+    toast(`${checks.length}개 달에 적용되었습니다`);
+  }catch(e){ toast('적용 실패'); console.error(e); }
+};
+
+/* ========== 6. 차액 정산 ========== */
+window.renderDiff = function(el){
+  const md=A2.state.monthData; const rows=allCalc2();
+  // 표시할 열: 건강·요양·연금은 항상, 고용보험은 근로자부담 직원이 하나라도 있으면 표시
+  const anyEmpWorker = rows.some(({emp})=>emp.type&&emp['ins_emp']&&!emp.empFull);
+  const DK = ['health','care','pension', ...(anyEmpWorker?['emp']:[])].filter(k=>A2.INS_KEYS.includes(k));
+  const g={ded:{},ins:{}}; DK.forEach(k=>{g.ded[k]=0;g.ins[k]=0;});
+  const body=rows.map(({emp,c},i)=>{
+    const ins=md.insurance[emp.id]||{};
+    let rowDed=0,rowIns=0;
+    const cells=DK.map(k=>{
+      // 고용보험 회사전액부담 직원은 이 칸을 대조 제외
+      if(k==='emp' && emp.empFull){
+        return `<td class="zero c" colspan="3">회사전액</td>`;
+      }
+      const d=c.ded[k]||0;
+      const iv=emp['ins_'+k]?A2.insWorkerShare(k, num(ins[k])):0;
+      g.ded[k]+=d; g.ins[k]+=iv; rowDed+=d; rowIns+=iv;
+      const diff=d-iv; // 명세 − 고지 (회계 전달과 동일)
+      return `<td>${won(d)}</td><td>${won(iv)}</td><td class="${diff===0?'zero':diff>0?'neg':'pos'}">${diff>0?'+':''}${won(diff)}</td>`;
+    }).join('');
+    const rowDiff=rowDed-rowIns; // 명세 − 고지
+    return `<tr><td class="c muted">${i+1}</td><td class="name l">${esc(emp.name)||'-'}</td>${cells}
+      <td class="${rowDiff===0?'':rowDiff>0?'neg':'pos'}"><b>${rowDiff>0?'+':''}${won(rowDiff)}</b></td></tr>`;
+  }).join('');
+  const gDedTot=Object.values(g.ded).reduce((s,v)=>s+v,0);
+  const gInsTot=Object.values(g.ins).reduce((s,v)=>s+v,0);
+  const gDiff=gDedTot-gInsTot; // 명세 − 고지 (회계 전달과 동일)
+
+  el.innerHTML=`
+  <div class="stats">
+    <div class="stat"><div class="lbl">명세서 공제 합계</div><div class="val sm">${won(gDedTot)}<span style="font-size:12px">원</span></div><div class="foot">근로자 부담분</div></div>
+    <div class="stat accent"><div class="lbl">고지 근로자부담 합계</div><div class="val sm">${won(gInsTot)}<span style="font-size:12px">원</span></div><div class="foot">국민연금은 고지액의 50%</div></div>
+    <div class="stat ${gDiff===0?'green':'amber'}"><div class="lbl">총 차액</div><div class="val sm">${gDiff>0?'+':''}${won(gDiff)}<span style="font-size:12px">원</span></div><div class="foot">${gDiff>0?'과다 공제(환급)':gDiff<0?'추가 부담 발생':'일치'}</div></div>
+  </div>
+  <div class="card">
+    <div class="card-h"><div><h3>직원별 차액 대조</h3><div class="desc">차액 = 명세서 공제 − 고지 근로자부담 · 국민연금은 고지액의 50% · 고용보험 회사전액부담 직원은 대조 제외</div></div></div>
+    <div class="card-b flush"><div class="tbl-wrap"><table class="fit">
+      <thead>
+        <tr><th class="c" rowspan="2">순번</th><th class="l" rowspan="2">성명</th>
+          ${DK.map(k=>`<th colspan="3">${A2.INS_LABEL[k]}${k==='pension'?'<span style="font-weight:400;font-size:10px"> (½)</span>':''}</th>`).join('')}<th rowspan="2">총차액</th></tr>
+        <tr>${DK.map(()=>`<th>명세</th><th>고지</th><th>차액</th>`).join('')}</tr>
+      </thead>
+      <tbody>${body||`<tr><td colspan="${DK.length*3+3}"><div class="empty"><p>데이터가 없습니다.</p></div></td></tr>`}</tbody>
+      <tfoot><tr class="sum"><td colspan="2" class="l">회사 합계</td>
+        ${DK.map(k=>{const d=g.ded[k],iv=g.ins[k],df=d-iv;return `<td>${won(d)}</td><td>${won(iv)}</td><td class="${df===0?'':df>0?'neg':'pos'}">${df>0?'+':''}${won(df)}</td>`;}).join('')}
+        <td>${gDiff>0?'+':''}${won(gDiff)}</td></tr></tfoot>
+    </table></div></div>
+  </div>`;
+};
+
+/* ========== 7. 급여명세표 ========== */
+window.renderSlip = function(el){
+  const rows=allCalc2().filter(({emp})=>emp.name);
+  const md=A2.state.monthData; const [y,mo]=A2.state.month.split('-');
+  el.innerHTML=`
+  <div class="card no-print"><div class="card-h"><div><h3>급여명세표</h3><div class="desc">${y}년 ${mo}월분 · 지급일 ${md.meta.payDate||'-'} · ${rows.length}명</div></div>
+    <button class="btn primary" onclick="window.print()">🖨 인쇄 / PDF 저장</button></div></div>
+  <div class="slips">
+    ${rows.map(({emp,c})=>slipCard(emp,c,y,mo,md.meta.payDate)).join('')||'<div class="empty"><p>명세표를 출력할 직원이 없습니다.</p></div>'}
+  </div>`;
+};
+function slipCard(emp,c,y,mo,payDate){
+  const varMealIncluded = emp.type==='variable' && A2.num(emp.mealIncluded)>0;
+  const payRows=[
+    ['기본급',c.pay.base],['근속수당',c.pay.senior],['잔업수당',c.pay.ot],['특근수당',c.pay.hol],
+    ['상여금',c.pay.etc],['차량유지비',c.pay.car],
+    // 변동급 식대포함이면 식대 줄 숨김 (기본급에 이미 포함)
+    ...(varMealIncluded ? [] : [['식대',c.pay.meal]]),
+    ['기타',c.pay.other]
+  ];
+  const dedRows=A2.DEDUCT_KEYS.map(k=>[A2.DEDUCT_LABEL[k],c.ded[k]]);
+  const maxLen=Math.max(payRows.length,dedRows.length);
+  const rowsHtml=arr=>{let h='';for(let i=0;i<maxLen;i++){const r=arr[i];
+    h+=`<div class="srow"><span class="k">${r?r[0]:'&nbsp;'}</span><span class="v">${r?won(r[1]):''}</span></div>`;}return h;};
+  let otInfo='';
+  if(emp.type==='variable'){
+    const h=c.pay._hours||{};
+    otInfo=`<div class="srow" style="font-size:10.5px;color:#888;border-top:1px solid var(--line)"><span>잔업 ${h.overtime||0}h × ${won(c.pay._otRate)}</span><span>특근 ${h.holiday||0}h × ${won(c.pay._holRate)}</span></div>`;
+  }
+  return `<div class="slip">
+    <div class="sh">${y}년 ${mo}월분 급여명세표</div>
+    <div class="meta"><span>성명 <b>${esc(emp.name)}</b></span><span>지급일 ${payDate||'-'}</span></div>
+    <div class="cols">
+      <div class="col-l">
+        <div class="sh2">지급 내역</div>
+        ${rowsHtml(payRows)}
+        <div class="stot"><span>급여계</span><span>${won(c.gross)}</span></div>
+      </div>
+      <div class="col-r">
+        <div class="sh2">공제 내역</div>
+        ${rowsHtml(dedRows)}
+        <div class="stot"><span>공제계</span><span>${won(c.totDed)}</span></div>
+      </div>
+    </div>
+    ${otInfo}
+    <div class="net">실지급액 ${won(c.net)} 원</div>
+    <div class="foot">노고에 감사드립니다 · 주식회사 ${coName()}</div>
+  </div>`;
+}
+
+/* ========== 8. 회계 전달 ========== */
+window.renderExport = function(el){
+  const rows=allCalc2(); const md=A2.state.monthData;
+  const g={gross:0,totDed:0,net:0,pay:{},ded:{},adj:0};
+  A2.PAY_ITEMS.forEach(it=>g.pay[it.k]=0);A2.DEDUCT_KEYS.forEach(k=>g.ded[k]=0);
+  rows.forEach(({emp,c})=>{g.gross+=c.gross;g.totDed+=c.totDed;g.net+=c.net;
+    const ep=exportPay(emp,c);
+    A2.PAY_ITEMS.forEach(it=>g.pay[it.k]+=ep[it.k]||0);A2.DEDUCT_KEYS.forEach(k=>g.ded[k]+=c.ded[k]||0);
+    g.adj+=yearEndAdjust(emp,c);});
+  // 0은 '-'로, 값 있으면 콤마
+  const w=v=>{ v=A2.num(v); return v===0 ? '<span class="dash">-</span>' : won(v); };
+
+  el.innerHTML=`
+  <div class="card">
+    <div class="card-h"><div><h3>회계사무실 전달 양식</h3>
+      <div class="desc">${coName()} · ${monthLabel(A2.state.month)} 급여자료 · 지급일 ${md.meta.payDate||'-'} · 기타(연말정산)=건강·장기요양 항목별 (명세−고지) 적립분, 음수 항목은 적립금에서 상계되어 0 처리</div></div>
+      <button class="btn green" onclick="exportXLSX()">↧ 엑셀 다운로드 (.xlsx)</button></div>
+    <div class="card-b flush"><div class="tbl-wrap"><table id="expTbl" class="exp-tbl fit">
+      <thead>
+        <tr>
+          <th class="c" rowspan="2">순번</th><th class="l" rowspan="2">성명</th><th class="l" rowspan="2">직책</th>
+          <th class="grp-pay" colspan="${A2.PAY_ITEMS.length+1}">급 여 내 역</th>
+          <th class="grp-ded" colspan="${A2.DEDUCT_KEYS.length+2}">공 제 내 역</th>
+          <th class="grp-net" rowspan="2">차감<br>지급액</th>
+        </tr>
+        <tr>
+          ${A2.PAY_ITEMS.map(it=>`<th class="grp-pay">${it.t}</th>`).join('')}<th class="grp-pay sumcol">급여계</th>
+          ${A2.DEDUCT_KEYS.map(k=>`<th class="grp-ded">${A2.DEDUCT_LABEL[k]}</th>`).join('')}<th class="grp-ded">기타<br>(연말정산)</th><th class="grp-ded sumcol">공제계</th>
+        </tr>
+      </thead>
+      <tbody>
+      ${rows.map(({emp,c},i)=>{
+        const ep = exportPay(emp,c);
+        const adj = yearEndAdjust(emp,c);
+        return `<tr>
+        <td class="c muted">${i+1}</td>
+        <td class="name l">${esc(emp.name)||'-'}</td><td class="l muted">${esc(emp.title||'')}</td>
+        ${A2.PAY_ITEMS.map(it=>`<td class="cell-pay">${w(ep[it.k])}</td>`).join('')}<td class="cell-pay sumcol"><b>${w(c.gross)}</b></td>
+        ${A2.DEDUCT_KEYS.map(k=>`<td class="cell-ded">${w(c.ded[k])}</td>`).join('')}<td class="cell-ded ${adj===0?'':'accrue'}">${w(adj)}</td><td class="cell-ded sumcol"><b>${w(c.totDed)}</b></td>
+        <td class="cell-net"><b>${w(c.net)}</b></td>
+      </tr>`;}).join('')}
+      </tbody>
+      <tfoot><tr class="sum"><td colspan="3" class="l">합 계</td>
+        ${A2.PAY_ITEMS.map(it=>`<td class="cell-pay">${w(g.pay[it.k])}</td>`).join('')}<td class="cell-pay sumcol"><b>${w(g.gross)}</b></td>
+        ${A2.DEDUCT_KEYS.map(k=>`<td class="cell-ded">${w(g.ded[k])}</td>`).join('')}<td class="cell-ded ${g.adj===0?'':'accrue'}">${w(g.adj)}</td><td class="cell-ded sumcol"><b>${w(g.totDed)}</b></td>
+        <td class="cell-net"><b>${w(g.net)}</b></td></tr></tfoot>
+    </table></div></div>
+  </div>`;
+};
+
+/* 엑셀 내보내기 (SheetJS) */
+async function ensureXLSX(){
+  if(window.XLSX) return window.XLSX;
+  await new Promise((res,rej)=>{const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+  return window.XLSX;
+}
+function tableToAOA(tblId){
+  const t=document.getElementById(tblId); const aoa=[];
+  t.querySelectorAll('tr').forEach(tr=>{
+    const row=[]; tr.querySelectorAll('th,td').forEach(cell=>{
+      let txt=cell.textContent.trim().replace(/,/g,'');
+      if(txt==='-'){ row.push(0); return; } // 대시(0 표시)는 숫자 0으로
+      const n=parseFloat(txt); row.push((txt!==''&&!isNaN(n)&&/^[\d.+-]+$/.test(txt))?n:cell.textContent.trim());
+    }); aoa.push(row);
+  });
+  return aoa;
+}
+window.exportXLSX = async function(){
+  const XLSX=await ensureXLSX();
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(tableToAOA('expTbl'));
+  XLSX.utils.book_append_sheet(wb,ws,'급여대장');
+  XLSX.writeFile(wb,`${coName()}_급여대장_${A2.state.month}.xlsx`);
+  toast('엑셀 다운로드 완료');
+};
+
+/* ========== 9. 연간 합산 (연말정산 상계) ========== */
+// 연간 결정세액 저장/로드: companies/{co}/annual/{year}
+window._annualData = null; // {year, decided:{empId:{gap,local,health,care,pension}}}
+window._annualTab = 'ins'; // 기본 탭: 4대보험
+window._annualMonths = null; // 선택된 월 Set (null이면 전체)
+window._annualCache = null;  // {company, year, monthDatas, decided}
+window.renderAnnual = async function(el){
+  const year = A2.state.month.split('-')[0];
+  const company = A2.state.company;
+  const allMonths=[]; for(let m=1;m<=12;m++) allMonths.push(`${year}-${String(m).padStart(2,'0')}`);
+  if(!window._annualMonths || window._annualMonthsYear!==year){
+    window._annualMonths=new Set(allMonths); window._annualMonthsYear=year;
+  }
+  // 캐시가 현재 회사·연도와 맞으면 재로드 없이 표만 그림
+  const cache=window._annualCache;
+  if(cache && cache.company===company && cache.year===year){
+    paintAnnual(el); return;
+  }
+  // 로드 필요
+  el.innerHTML=`<div class="empty"><div class="big">◌</div><p>${year}년 데이터 집계 중…</p></div>`;
+  const {db,doc,getDoc}=window.__fb;
+  const monthDatas={};
+  for(const m of allMonths){
+    try{ const snap=await getDoc(doc(db,'companies',company,'months',m));
+      monthDatas[m]=snap.exists()?snap.data():{overrides:{},insurance:{},attendance:{}};
+    }catch(e){ monthDatas[m]={overrides:{},insurance:{},attendance:{}}; }
+  }
+  let decided={};
+  try{ const asnap=await getDoc(doc(db,'companies',company,'annual',year));
+    if(asnap.exists()) decided=asnap.data().decided||{};
+  }catch(e){}
+  window._annualCache={company, year, monthDatas, decided};
+  window._annualData={year, decided};
+  paintAnnual(el);
+};
+// 캐시된 데이터로 표만 그림 (재로드 없음)
+function paintAnnual(el){
+  const {year, monthDatas, decided}=window._annualCache;
+  window._annualData={year, decided};
+  const allMonths=[]; for(let m=1;m<=12;m++) allMonths.push(`${year}-${String(m).padStart(2,'0')}`);
+  const selMonths=allMonths.filter(m=>window._annualMonths.has(m));
+
+  const emps=A2.state.employees;
+  const ALL_ITEMS=[
+    {k:'gap',   label:'갑근세',   type:'tax'},
+    {k:'local', label:'지방소득세', type:'tax'},
+    {k:'health',label:'건강보험',  type:'ins'},
+    {k:'care',  label:'장기요양',  type:'ins'},
+    {k:'pension',label:'국민연금', type:'ins'}
+  ];
+  const tab = window._annualTab || 'ins';
+  const ITEMS = ALL_ITEMS.filter(it=> tab==='tax' ? it.type==='tax' : it.type==='ins');
+
+  // 선택된 달만 집계
+  function empAnnual(emp){
+    const r={}; ALL_ITEMS.forEach(it=>r[it.k]={paid:0,noticed:0});
+    selMonths.forEach(m=>{
+      const mdSaved=monthDatas[m];
+      const ov=(mdSaved.overrides||{})[emp.id]||{};
+      const ins=(mdSaved.insurance||{})[emp.id]||{};
+      ALL_ITEMS.forEach(it=>{
+        const paid = ('ded_'+it.k in ov) ? A2.num(ov['ded_'+it.k]) : A2.num(emp['ded_'+it.k]);
+        r[it.k].paid += paid;
+        if(it.type==='ins'){ r[it.k].noticed += A2.insWorkerShare(it.k, A2.num(ins[it.k])); }
+      });
+    });
+    return r;
+  }
+  const rows=emps.map(e=>({emp:e, a:empAnnual(e)}));
+  const tot={}; ITEMS.forEach(it=>tot[it.k]={paid:0,noticed:0,decided:0});
+  rows.forEach(({emp,a})=>ITEMS.forEach(it=>{ tot[it.k].paid+=a[it.k].paid; tot[it.k].noticed+=a[it.k].noticed;
+    tot[it.k].decided += A2.num((decided[emp.id]||{})[it.k]); }));
+
+  const won=A2.won;
+  const tabBtn=(id,label)=>`<button class="atab ${tab===id?'active':''}" onclick="setAnnualTab('${id}')">${label}</button>`;
+  // 월 선택 칩
+  const monthChips = allMonths.map((m,i)=>{
+    const on=window._annualMonths.has(m); const has=monthHasData(monthDatas[m], emps);
+    return `<button class="mchip ${on?'on':''} ${has?'':'nodata'}" onclick="toggleAnnualMonth('${m}')" title="${has?'데이터 있음':'데이터 없음'}">${i+1}월</button>`;
+  }).join('');
+  const helpText = tab==='tax'
+    ? `· <b>납부합계</b>: 선택한 달 급여명세에서 원천징수한 세액 합계<br>· <b>결정세액</b>: 연말정산 결정세액(추징) — 칸에 직접 입력<br>· <b>차액</b> = 납부합계 − 결정세액. <span class="pos">양수</span>면 환급, <span class="neg">음수</span>면 추가납부.`
+    : `· <b>지급(명세)</b>: 선택한 달 급여명세에서 실제 공제한 금액 합계 (고지+α 적립분 포함)<br>· <b>고지</b>: 선택한 달 공단 고지 근로자부담 합계<br>· <b>연말정산</b>: 연말정산 추징(결정) 금액 — 칸에 직접 입력<br>· <b>최종잔액</b> = (지급 − 고지) − 연말정산. <span class="pos">양수</span>면 적립분이 추징금보다 많아 남은 것, <span class="neg">음수</span>면 부족분.`;
+
+  el.innerHTML=`
+  <div class="card">
+    <div class="card-h"><div><h3>${coName()} ${year}년 연간 합산 · 연말정산 상계</h3>
+      <div class="desc">매월 <b>명세 공제 − 고지</b>로 쌓인 적립 차액을 연말정산 결정세액(추징금)과 상계합니다.</div></div>
+      <button class="btn green" onclick="exportAnnualXLSX()">↧ 엑셀</button></div>
+    <div class="card-b" style="padding-bottom:8px">
+      <div class="annualsel">
+        <span class="mlabel">집계 월</span>
+        <div class="mchips">${monthChips}</div>
+        <div class="mactions"><button class="mact" onclick="annualSelectAll(true)">전체 선택</button><span class="mact-div"></span><button class="mact" onclick="annualSelectAll(false)">전체 해제</button></div>
+      </div>
+      <div class="atabs" style="margin-top:12px">${tabBtn('tax','세금 (갑근세·지방소득세)')}${tabBtn('ins','4대보험 (건강·장기요양·국민연금)')}</div>
+    </div>
+    <div class="card-b flush"><div class="tbl-wrap"><table id="annualTbl" class="fit">
+      <thead>
+        <tr><th class="c" rowspan="2">순번</th><th class="l" rowspan="2">성명</th><th class="l" rowspan="2">직책</th>
+          ${ITEMS.map(it=> it.type==='tax'? `<th colspan="3">${it.label}</th>` : `<th colspan="4">${it.label}</th>`).join('')}
+        </tr>
+        <tr>
+          ${ITEMS.map(it=> it.type==='tax'? `<th>납부합계</th><th>결정세액</th><th>차액</th>` : `<th>지급(명세)</th><th>고지</th><th>연말정산</th><th>최종잔액</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+      ${rows.map(({emp,a},i)=>{
+        const dec=decided[emp.id]||{};
+        return `<tr><td class="c muted">${i+1}</td><td class="name l">${esc(emp.name)||'-'}</td><td class="l muted">${esc(emp.title||'')}</td>
+        ${ITEMS.map(it=>{
+          const paid=a[it.k].paid, noticed=a[it.k].noticed;
+          const decVal=A2.num(dec[it.k]);
+          if(it.type==='tax'){
+            const diff=paid-decVal;
+            return `<td>${won(paid)}</td>
+              <td class="edit"><input value="${decVal?decVal.toLocaleString('ko-KR'):''}" data-emp="${emp.id}" data-item="${it.k}" inputmode="numeric" style="width:90px"></td>
+              <td class="${diff===0?'zero':diff>0?'pos':'neg'}">${diff>0?'+':''}${won(diff)}</td>`;
+          } else {
+            const accrued=paid-noticed; const finalBal=accrued-decVal;
+            return `<td>${won(paid)}</td><td>${won(noticed)}</td>
+              <td class="edit"><input value="${decVal?decVal.toLocaleString('ko-KR'):''}" data-emp="${emp.id}" data-item="${it.k}" inputmode="numeric" style="width:90px"></td>
+              <td class="${finalBal===0?'zero':finalBal>0?'pos':'neg'}"><b>${finalBal>0?'+':''}${won(finalBal)}</b></td>`;
+          }
+        }).join('')}
+        </tr>`;
+      }).join('')||`<tr><td colspan="20"><div class="empty"><p>직원이 없습니다.</p></div></td></tr>`}
+      </tbody>
+      <tfoot><tr class="sum"><td colspan="3" class="l">합계</td>
+        ${ITEMS.map(it=>{
+          if(it.type==='tax'){ const diff=tot[it.k].paid-tot[it.k].decided;
+            return `<td>${won(tot[it.k].paid)}</td><td>${won(tot[it.k].decided)}</td><td class="${diff>0?'pos':diff<0?'neg':''}">${diff>0?'+':''}${won(diff)}</td>`;
+          } else { const accrued=tot[it.k].paid-tot[it.k].noticed; const fb=accrued-tot[it.k].decided;
+            return `<td>${won(tot[it.k].paid)}</td><td>${won(tot[it.k].noticed)}</td><td>${won(tot[it.k].decided)}</td><td class="${fb>0?'pos':fb<0?'neg':''}"><b>${fb>0?'+':''}${won(fb)}</b></td>`;
+          }
+        }).join('')}
+      </tr></tfoot>
+    </table></div></div>
+  </div>
+  <div class="card"><div class="card-b">
+    <p style="font-size:12.5px;color:var(--ink2);line-height:1.7"><b>보는 법</b><br>${helpText}</p>
+  </div></div>`;
+  el.querySelectorAll('td.edit input').forEach(inp=>{
+    inp.addEventListener('blur',()=>{const v=A2.parseNum(inp.value);inp.value=v?v.toLocaleString('ko-KR'):'';});
+    inp.addEventListener('focus',()=>{const v=A2.parseNum(inp.value);inp.value=v||'';});
+    inp.addEventListener('change',async()=>{
+      const {emp,item}=inp.dataset; const v=A2.parseNum(inp.value);
+      const dec=window._annualCache.decided;
+      dec[emp]=dec[emp]||{};
+      if(v) dec[emp][item]=v; else delete dec[emp][item];
+      // Firestore 저장 (백그라운드)
+      try{ window.__fb.setDoc(window.__fb.doc(window.__fb.db,'companies',window._annualCache.company,'annual',window._annualCache.year),{year:window._annualCache.year,decided:dec}); }catch(e){console.error(e);}
+      // 재로드 없이 표만 다시 그림
+      paintAnnual(document.getElementById('content'));
+    });
+  });
+  attachGridNav([...el.querySelectorAll('td.edit input')]);
+}
+// 그 달에 데이터(공제 override나 고지)가 있는지
+function monthHasData(md, emps){
+  if(!md) return false;
+  const hasOv = md.overrides && Object.keys(md.overrides).length>0 && Object.values(md.overrides).some(o=>o&&Object.keys(o).length>0);
+  const hasIns = md.insurance && Object.keys(md.insurance).length>0 && Object.values(md.insurance).some(o=>o&&Object.keys(o).length>0);
+  return hasOv || hasIns;
+}
+window.setAnnualTab = function(t){ window._annualTab=t; paintAnnual(document.getElementById('content')); };
+window.toggleAnnualMonth = function(m){
+  if(window._annualMonths.has(m)) window._annualMonths.delete(m); else window._annualMonths.add(m);
+  paintAnnual(document.getElementById('content'));
+};
+window.annualSelectAll = function(on){
+  const year=A2.state.month.split('-')[0];
+  if(on){ for(let i=1;i<=12;i++) window._annualMonths.add(`${year}-${String(i).padStart(2,'0')}`); }
+  else window._annualMonths.clear();
+  paintAnnual(document.getElementById('content'));
+};
+window.exportAnnualXLSX = async function(){
+  const XLSX=await ensureXLSX();
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(tableToAOA('annualTbl'));
+  XLSX.utils.book_append_sheet(wb,ws,'연간합산');
+  XLSX.writeFile(wb,`${coName()}_연간합산_${A2.state.month.split('-')[0]}.xlsx`);
+  toast('엑셀 다운로드 완료');
+};
+
+})();
+
+/* ===== BOOT ===== */
+__bootInit();
+
+</script>
+
+<script>
+/* 넓은 표(.fit)를 컨테이너 폭에 맞게 가로스크롤 없이 자동 축소 · 숫자는 한 줄 유지 */
+(function(){
+  function fitOne(t){
+    var wrap=t.parentElement;
+    if(!wrap||!wrap.classList.contains('tbl-wrap'))return;
+    t.style.transform='';t.style.transformOrigin='top left';
+    var natural=t.offsetWidth, avail=wrap.clientWidth;
+    if(!natural||!avail)return;
+    var s=avail/natural;
+    if(s>1.25)s=1.25; // 남는 폭이 많아도 과하게 커지지 않도록 상한
+    if(Math.abs(s-1)<0.01){
+      t.style.transform='';wrap.style.height='';wrap.style.overflow='';
+      return;
+    }
+    t.style.transform='scale('+s+')';
+    wrap.style.height=(t.offsetHeight*s)+'px';
+    wrap.style.overflow='hidden';
+  }
+  var seen=new WeakSet();
+  var ro=('ResizeObserver'in window)?new ResizeObserver(function(es){
+    es.forEach(function(e){
+      var t=(e.target.tagName==='TABLE')?e.target:e.target.querySelector('table.fit');
+      if(t)fitOne(t);
+    });
+  }):null;
+  function setup(){
+    document.querySelectorAll('#content table.fit').forEach(function(t){
+      fitOne(t);
+      if(ro&&!seen.has(t)){seen.add(t);ro.observe(t);if(t.parentElement)ro.observe(t.parentElement);}
+    });
+  }
+  var content=document.getElementById('content');
+  if(content){
+    var mo=new MutationObserver(function(){clearTimeout(window.__fitT);window.__fitT=setTimeout(setup,60);});
+    mo.observe(content,{childList:true,subtree:true});
+  }
+  window.addEventListener('resize',function(){clearTimeout(window.__fitR);window.__fitR=setTimeout(setup,80);});
+  setTimeout(setup,300);
+})();
+</script>
+
+</body>
+</html>
