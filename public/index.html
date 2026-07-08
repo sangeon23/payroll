@@ -314,6 +314,16 @@ table.fit tbody tr:hover td{background:#eef4ff}
 .led-close:hover{color:var(--ink);background:var(--line2)}
 .led-tbl td.run,.led-tbl th.run{border-left:1.5px solid #b9c0cc;background:#fbf7ef}
 .led-tbl tbody tr:hover td.run{background:#f6efe0}
+
+/* 페이지 확정(잠금) */
+.lockbtn{border-color:#bfe3ca;color:var(--green);font-weight:700}
+.lockbtn:hover{background:var(--green-soft);border-color:var(--green)}
+.lockbtn-on{background:var(--green);border-color:var(--green);color:#fff;font-weight:700}
+.lockbtn-on:hover{filter:brightness(.94)}
+.lock-banner{display:flex;align-items:center;gap:9px;background:var(--green-soft);border:1px solid #bfe3ca;color:#0a6b3d;font-size:12.5px;font-weight:600;padding:10px 14px;border-radius:10px;margin-bottom:14px}
+.lock-banner .lk{font-size:15px;line-height:1}
+.page-locked input:disabled,.page-locked select:disabled{background:#eef0f3!important;color:#a2a8b2!important;-webkit-text-fill-color:#a2a8b2;cursor:not-allowed;opacity:1;border-color:transparent!important;box-shadow:none!important}
+.page-locked [data-lockable]:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
 </style>
 </head>
 <body>
@@ -473,6 +483,7 @@ async function loadMonth(m){
   state.monthData.attendance = state.monthData.attendance||{};
   state.monthData.overrides = state.monthData.overrides||{};
   state.monthData.insurance = state.monthData.insurance||{};
+  state.monthData.locks = state.monthData.locks||{};
   state.monthData.meta = state.monthData.meta||{payDate:defaultPayDate(m)};
 }
 let saveTimer=null;
@@ -608,6 +619,43 @@ function render(){
 window.APP = { state, COMPANIES, calcEmp, attHours, fillDefaultAttendance, standardWeekdayHours, PAY_ITEMS, DEDUCT_KEYS, DEDUCT_LABEL, INS_KEYS, INS_LABEL, INS_CONFIG, INS_ENROLL_KEYS, insDiffKeysFor, insWorkerShare, insTotalAmount,
   won, wonInput, parseNum, num, uid, saveEmployee, deleteEmployeeDoc, loadEmployees, saveMonthDebounced,
   toast, render, go, daysInMonth, dowOf, DOW, monthLabel, PAGES, defaultPayDate, switchCompany };
+
+/* ===== 페이지 확정(잠금) — 입력 페이지 실수 방지 ===== */
+window.__LOCK_LABEL = { att:'근태현황', ledger:'급여대장', ins:'4대보험 고지' };
+window.isLocked = function(page){
+  const md = window.APP && window.APP.state.monthData;
+  return !!(md && md.locks && md.locks[page]);
+};
+window.toggleLock = function(page){
+  const A = window.APP; const md = A.state.monthData; md.locks = md.locks || {};
+  if(md.locks[page]){
+    if(!confirm(`[${window.__LOCK_LABEL[page]||page}] ${A.monthLabel(A.state.month)} 확정을 해제하고 다시 수정할 수 있게 할까요?`)) return;
+    delete md.locks[page];
+    A.toast('🔓 잠금 해제됨 · 수정 가능');
+  } else {
+    md.locks[page] = true;
+    A.toast('🔒 확정됨 · 수정 잠금');
+  }
+  A.saveMonthDebounced();
+  A.render();
+};
+// 카드 헤더용 잠금/확정 버튼
+window.lockBtn = function(page){
+  const on = window.isLocked(page);
+  return `<button class="btn ${on?'lockbtn-on':'lockbtn'}" onclick="toggleLock('${page}')" title="${on?'수정하려면 잠금 해제':'확정하면 이 달 입력을 잠급니다'}">${on?'🔒 확정됨 · 잠금해제':'🔓 확정하기'}</button>`;
+};
+// 렌더 후 호출: 잠금 상태면 입력 비활성화 + 상단 배너
+window.applyLock = function(page, el){
+  const on = window.isLocked(page);
+  el.classList.toggle('page-locked', on);
+  if(!on) return;
+  el.querySelectorAll('input, select').forEach(x=>{ x.disabled = true; });
+  el.querySelectorAll('[data-lockable]').forEach(b=>{ b.disabled = true; });
+  const bn = document.createElement('div');
+  bn.className = 'lock-banner';
+  bn.innerHTML = `<span class="lk">🔒</span><span><b>${window.__LOCK_LABEL[page]||''}</b> · ${window.APP.monthLabel(window.APP.state.month)} 확정됨 — 수정하려면 위 <b>잠금해제</b> 버튼을 누르세요.</span>`;
+  el.insertBefore(bn, el.firstChild);
+};
 
 /* ---------- 회사 전환 ---------- */
 function subscribeEmployees(){
@@ -1005,9 +1053,10 @@ window.renderAtt = function(el){
     <div class="card-h"><div><h3>${monthLabel(A.state.month)} 근태 입력</h3>
       <div class="desc">월~금 근무 8h+잔업 2h, 토요일 주휴 8h 기본. 만근이면 209h로 기본급 고정, 결근하면 그 칸을 0/공란으로 두면 일할계산. 특근은 달력 또는 아래 표에서 입력.</div></div>
       <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn primary" onclick="openHolidayModal()">📅 특근일 지정</button>
+        ${window.lockBtn('att')}
+        <button class="btn primary" data-lockable onclick="openHolidayModal()">📅 특근일 지정</button>
         <button class="btn sm" onclick="openAttCopyModal()">📤 다른 회사로 복사</button>
-        <button class="btn sm" onclick="refillAll()">↻ 기본근무 다시 채우기</button>
+        <button class="btn sm" data-lockable onclick="refillAll()">↻ 기본근무 다시 채우기</button>
         <div class="legend"><span><span class="sw" style="background:var(--green-soft)"></span>자동계산 급여</span></div></div></div>
     <div class="card-b flush"><div class="att-wrap"><table class="att-tbl">
       <thead>
@@ -1021,10 +1070,12 @@ window.renderAtt = function(el){
     </table></div></div>
   </div>`;
   attachAttHandlers();
+  window.applyLock('att', el);
 };
 
 // 특근일 지정 팝업
 window.openHolidayModal = function(){
+  if(window.isLocked('att')){ A.toast('🔒 확정된 달입니다. 잠금 해제 후 수정하세요.'); return; }
   const vars=A.state.employees.filter(e=>e.type==='variable');
   const box=document.getElementById('modalBox');
   box.innerHTML=`
@@ -1147,6 +1198,7 @@ function attachCalendar(vars, inModal){
 /* 직원별 근무일(평일근무) 달력 팝업 — 연두=근무, 흰색=결근 */
 let _workdayDraft = null;
 window.openWorkdayModal = function(empId){
+  if(window.isLocked('att')){ A.toast('🔒 확정된 달입니다. 잠금 해제 후 수정하세요.'); return; }
   const e=A.state.employees.find(x=>x.id===empId); if(!e)return;
   const wk=(A.state.monthData.attendance[empId]||{}).weekday||{};
   const worked=new Set();
@@ -1248,6 +1300,7 @@ function attachAttHandlers(){
   });
 }
 window.refillAll = function(){
+  if(window.isLocked('att')){ A.toast('🔒 확정된 달입니다. 잠금 해제 후 수정하세요.'); return; }
   const vars=A.state.employees.filter(e=>e.type==='variable');
   if(!confirm(`${monthLabel(A.state.month)} 변동급 ${vars.length}명의 평일근무·잔업을 기본값(월~금 8h+2h)으로 다시 채웁니다.\n토요일 특근 입력은 유지됩니다. 진행할까요?`))return;
   vars.forEach(e=>A.fillDefaultAttendance(e.id,true));
@@ -1367,6 +1420,7 @@ window.renderLedger = function(el){
     <div class="card-h"><div><h3>${monthLabel(A2.state.month)} 급여대장</h3>
       <div class="desc">변동급은 근태에서 자동, 세금·공제는 셀을 직접 수정하면 월별로 저장됩니다 (직원 기본값 위에 덮어씀)</div></div>
       <div style="display:flex;gap:8px;align-items:center">
+        ${window.lockBtn('ledger')}
         <button class="btn sm" onclick="openDedForwardModal()">📌 이후 달에 공제 적용</button>
         <label style="font-size:12px;color:#666">지급일 <input type="date" id="payDate" value="${md.meta.payDate||''}" style="border:1px solid var(--line);border-radius:6px;padding:4px 8px"></label>
       </div></div>
@@ -1432,6 +1486,7 @@ window.renderLedger = function(el){
     });
   });
   attachGridNav(ledInputs);
+  window.applyLock('ledger', el);
 };
 // 급여대장: 한 직원 행의 파생값(급여계·공제계·실지급)과 합계 행 갱신 (전체 재렌더 없이)
 function updateLedgerRow(el, empId){
@@ -1551,7 +1606,7 @@ window.renderIns = function(el){
   <div class="card">
     <div class="card-h"><div><h3>${monthLabel(A2.state.month)} 4대보험 실제 고지액</h3>
       <div class="desc">공단 고지서에 적힌 금액 그대로 입력하세요 · 건강·장기요양은 고지서가 <b>근로자분(50%)</b>만 표기 · 국민연금·고용·산재는 <b>100% 총액</b> 표기 · 맨 아래 <b>직원 합계</b>(근로자 부담)와 <b>회사 합계</b>(회사부담 포함 100%)로 구분됩니다</div></div>
-      <button class="btn primary" onclick="openInsBulkModal()">📋 여러 달에 일괄 적용</button></div>
+      <div style="display:flex;gap:8px;align-items:center">${window.lockBtn('ins')}<button class="btn primary" onclick="openInsBulkModal()">📋 여러 달에 일괄 적용</button></div></div>
     <div class="card-b flush"><div class="tbl-wrap"><table class="fit">
       <thead><tr><th class="c">순번</th><th class="l">성명</th>
         ${A2.INS_KEYS.map(k=>{
@@ -1602,6 +1657,7 @@ window.renderIns = function(el){
     });
   });
   attachGridNav(insInputs);
+  window.applyLock('ins', el);
 };
 // 4대보험 고지: 합계 두 줄만 다시 계산해 갱신 (커서 유지)
 function updateInsTotals(el){
