@@ -304,6 +304,16 @@ table.fit tbody tr:hover td{background:#eef4ff}
   .side{width:56px}.side .brand h1,.side .brand span,.side nav button span:not(.ic),.side .foot{display:none}
   .side nav button{justify-content:center}
 }
+
+/* 차액정산 — 직원별 정산원장 (거래처 원장 스타일) */
+.fit td.name .clik{cursor:pointer;color:var(--accent);border-bottom:1px dashed var(--accent-line);padding-bottom:1px}
+.fit td.name .clik:hover{color:#1a5fd0;border-bottom-color:var(--accent)}
+.fit tr.led-open td{background:var(--accent-soft)!important}
+.led-head{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%}
+.led-close{border:none;background:none;color:var(--gray);font-size:22px;line-height:1;cursor:pointer;padding:0 6px;border-radius:6px}
+.led-close:hover{color:var(--ink);background:var(--line2)}
+.led-tbl td.run,.led-tbl th.run{border-left:1.5px solid #b9c0cc;background:#fbf7ef}
+.led-tbl tbody tr:hover td.run{background:#f6efe0}
 </style>
 </head>
 <body>
@@ -565,6 +575,7 @@ let curPage='dash';
 function go(page){
   curPage=page;
   if(page!=='annual') window._annualCache=null; // 다른 페이지 갔다오면 연간은 새로 로드
+  if(page!=='diff'){ window._diffLedgerCache=null; window._diffLedgerEmp=null; } // 차액정산 떠나면 원장 초기화
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
   document.getElementById('pageTitle').textContent=PAGES[page].t;
   document.getElementById('pageSub').textContent=PAGES[page].s;
@@ -1713,7 +1724,8 @@ window.renderDiff = function(el){
       return `<td>${won(d)}</td><td>${won(iv)}</td><td class="${diff===0?'zero':diff>0?'neg':'pos'}">${diff>0?'+':''}${won(diff)}</td>`;
     }).join('');
     const rowDiff=rowDed-rowIns; // 명세 − 고지
-    return `<tr><td class="c muted">${i+1}</td><td class="name l">${esc(emp.name)||'-'}</td>${cells}
+    const _ledOpen = window._diffLedgerEmp===emp.id;
+    return `<tr class="${_ledOpen?'led-open':''}"><td class="c muted">${i+1}</td><td class="name l"><span class="clik" onclick="openDiffLedger('${emp.id}')" title="정산원장 보기">${esc(emp.name)||'-'}</span></td>${cells}
       <td class="${rowDiff===0?'':rowDiff>0?'neg':'pos'}"><b>${rowDiff>0?'+':''}${won(rowDiff)}</b></td></tr>`;
   }).join('');
   const gDedTot=Object.values(g.ded).reduce((s,v)=>s+v,0);
@@ -1739,8 +1751,108 @@ window.renderDiff = function(el){
         ${DK.map(k=>{const d=g.ded[k],iv=g.ins[k],df=d-iv;return `<td>${won(d)}</td><td>${won(iv)}</td><td class="${df===0?'':df>0?'neg':'pos'}">${df>0?'+':''}${won(df)}</td>`;}).join('')}
         <td>${gDiff>0?'+':''}${won(gDiff)}</td></tr></tfoot>
     </table></div></div>
-  </div>`;
+  </div>
+  <div id="diffLedger"></div>`;
+  if(window._diffLedgerEmp) paintDiffLedger();
 };
+
+/* ----- 차액정산: 직원별 정산원장 (거래처 원장 스타일) ----- */
+window._diffLedgerEmp = null;      // 현재 열려있는 직원 id (null이면 닫힘)
+window._diffLedgerCache = null;    // {company, year, monthDatas} — 연간 월별 데이터 캐시
+
+// 선택 직원의 대조 대상 보험 키 (차액정산 표와 동일 규칙)
+function ledgerKeys(emp){
+  return ['health','care','pension', ...(emp && emp.type && emp['ins_emp'] && !emp.empFull ? ['emp'] : [])]
+    .filter(k=>A2.INS_KEYS.includes(k));
+}
+// 성명 클릭 → 원장 열기/닫기(토글)
+window.openDiffLedger = function(empId){
+  window._diffLedgerEmp = (window._diffLedgerEmp===empId) ? null : empId;
+  A2.render(); // 차액정산 페이지 재렌더 → 선택행 강조 + 원장 컨테이너 갱신
+};
+// 원장 그리기 (연간 데이터 로드 후)
+async function paintDiffLedger(){
+  let box=document.getElementById('diffLedger'); if(!box) return;
+  const empId=window._diffLedgerEmp;
+  const emp=A2.state.employees.find(e=>e.id===empId);
+  if(!emp){ window._diffLedgerEmp=null; box.innerHTML=''; return; }
+
+  const year=A2.state.month.split('-')[0];
+  const company=A2.state.company;
+  let cache=window._diffLedgerCache;
+  if(!cache || cache.company!==company || cache.year!==year){
+    box.innerHTML=`<div class="card"><div class="card-b"><div class="empty" style="padding:26px"><div class="big">◌</div><p>${year}년 원장 불러오는 중…</p></div></div></div>`;
+    const {db,doc,getDoc}=window.__fb;
+    const monthDatas={};
+    for(let m=1;m<=12;m++){ const mm=`${year}-${String(m).padStart(2,'0')}`;
+      try{ const snap=await getDoc(doc(db,'companies',company,'months',mm));
+        monthDatas[mm]=snap.exists()?snap.data():{overrides:{},insurance:{}};
+      }catch(e){ monthDatas[mm]={overrides:{},insurance:{}}; }
+    }
+    cache=window._diffLedgerCache={company,year,monthDatas};
+  }
+  // 로드 중 사용자가 다른 직원/페이지로 이동했으면 중단
+  if(window._diffLedgerEmp!==empId) return;
+  box=document.getElementById('diffLedger'); if(!box) return;
+
+  const keys=ledgerKeys(emp);
+  const {monthDatas}=cache;
+  const rows=[]; let run=0;
+  for(let m=1;m<=12;m++){
+    const mm=`${year}-${String(m).padStart(2,'0')}`;
+    const md=monthDatas[mm]||{};
+    const ins=(md.insurance||{})[empId]||{};
+    const ov=(md.overrides||{})[empId]||{};
+    // 그 달에 고지(또는 공제조정) 기록이 있을 때만 원장 한 줄로 남김
+    const hasIns=keys.some(k=>num(ins[k])>0);
+    const hasOv=Object.keys(ov).some(kk=>kk.indexOf('ded_')===0);
+    if(!hasIns && !hasOv) continue;
+    const cell={}; let mDed=0,mIns=0;
+    keys.forEach(k=>{
+      const d=('ded_'+k in ov)?num(ov['ded_'+k]):num(emp['ded_'+k]);
+      const iv=emp['ins_'+k]?A2.insWorkerShare(k,num(ins[k])):0;
+      cell[k]={d,iv,diff:d-iv}; mDed+=d; mIns+=iv;
+    });
+    const mDiff=mDed-mIns; run+=mDiff;
+    rows.push({m,cell,mDed,mIns,mDiff,run});
+  }
+
+  const label=k=>A2.INS_LABEL[k]+(k==='pension'?'<span style="font-weight:400;font-size:10px"> (½)</span>':'');
+  const dcls=v=>v===0?'zero':v>0?'neg':'pos'; // 명세−고지: 양수=과다공제(빨강) 음수=부족(초록) — 기존 표와 동일
+  const sgn=v=>(v>0?'+':'')+won(v);
+  const tDed=rows.reduce((s,r)=>s+r.mDed,0), tIns=rows.reduce((s,r)=>s+r.mIns,0), tDiff=tDed-tIns;
+
+  box.innerHTML=`
+  <div class="card">
+    <div class="card-h"><div class="led-head">
+      <div><h3>${esc(emp.name)||'-'} · 정산원장 <span style="font-weight:600;color:var(--gray);font-size:12px">(${year}년)</span></h3>
+        <div class="desc">월별 <b>명세 공제 − 고지</b> 내역 · <b>누계</b> = 그 달까지 쌓인 차액(적립) 잔액</div></div>
+      <button class="led-close" onclick="openDiffLedger('${empId}')" title="닫기">×</button>
+    </div></div>
+    <div class="card-b flush"><div class="tbl-wrap"><table class="fit led-tbl">
+      <thead>
+        <tr><th class="c" rowspan="2">월</th>
+          ${keys.map(k=>`<th colspan="3">${label(k)}</th>`).join('')}
+          <th rowspan="2">당월 차액</th><th class="run" rowspan="2">누계</th></tr>
+        <tr>${keys.map(()=>`<th>명세</th><th>고지</th><th>차액</th>`).join('')}</tr>
+      </thead>
+      <tbody>
+      ${rows.map(r=>`<tr>
+        <td class="c"><b>${r.m}월</b></td>
+        ${keys.map(k=>{const c=r.cell[k];return `<td>${won(c.d)}</td><td>${won(c.iv)}</td><td class="${dcls(c.diff)}">${sgn(c.diff)}</td>`;}).join('')}
+        <td class="${dcls(r.mDiff)}"><b>${sgn(r.mDiff)}</b></td>
+        <td class="run ${dcls(r.run)}"><b>${sgn(r.run)}</b></td>
+      </tr>`).join('')||`<tr><td colspan="${keys.length*3+3}"><div class="empty" style="padding:26px"><p>${year}년에 기록된 고지·공제 내역이 없습니다.</p></div></td></tr>`}
+      </tbody>
+      ${rows.length?`<tfoot><tr class="sum">
+        <td class="c">합계</td>
+        ${keys.map(k=>{let d=0,iv=0;rows.forEach(r=>{d+=r.cell[k].d;iv+=r.cell[k].iv;});const df=d-iv;return `<td>${won(d)}</td><td>${won(iv)}</td><td class="${dcls(df)}">${sgn(df)}</td>`;}).join('')}
+        <td class="${dcls(tDiff)}"><b>${sgn(tDiff)}</b></td>
+        <td class="run ${dcls(tDiff)}"><b>${sgn(tDiff)}</b></td>
+      </tr></tfoot>`:''}
+    </table></div></div>
+  </div>`;
+}
 
 /* ========== 7. 급여명세표 ========== */
 window.renderSlip = function(el){
