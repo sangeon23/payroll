@@ -2061,13 +2061,104 @@ function tableToAOA(tblId){
   });
   return aoa;
 }
+// ExcelJS 로더 (서식 있는 엑셀용)
+async function ensureExcelJS(){
+  if(window.ExcelJS) return window.ExcelJS;
+  await new Promise((res,rej)=>{const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+  return window.ExcelJS;
+}
+// 회계전달용 서식 워크북 생성 (병합 헤더·테두리·색·천단위 콤마·합계 강조)
+function buildLedgerWorkbook(ExcelJS, ctx){
+  const {rows, PAY, DED, DEDUCT_LABEL, exportPay, yearEndAdjust, title} = ctx;
+  const nPay=PAY.length, nDed=DED.length;
+  const colGrossSum = 3+nPay+1;
+  const colDedStart = colGrossSum+1;
+  const colAdj = colDedStart+nDed;
+  const colDedSum = colAdj+1;
+  const colNet = colDedSum+1;
+  const totalCols = colNet;
+  const HR1=2, HR2=3, DATA0=4;
+
+  const NUM='#,##0;-#,##0;"-"';
+  const thin={style:'thin', color:{argb:'FFCED3DB'}};
+  const border={top:thin,left:thin,bottom:thin,right:thin};
+  const C={pay:'FFEAF1FE',ded:'FFEDEFF3',net:'FFF7EEDD',payH:'FFDBE8FB',dedH:'FFDDE3EC',netH:'FFF0DEB8',head:'FFEFF2F7',sum:'FFE7EDF6'};
+  const fillOf=argb=>({type:'pattern',pattern:'solid',fgColor:{argb}});
+
+  const wb=new ExcelJS.Workbook();
+  const ws=wb.addWorksheet('급여대장',{views:[{state:'frozen',xSplit:3,ySplit:HR2}]});
+
+  ws.mergeCells(1,1,1,totalCols);
+  const tc=ws.getCell(1,1); tc.value=title; tc.font={bold:true,size:13}; tc.alignment={vertical:'middle',horizontal:'left'};
+  ws.getRow(1).height=24;
+
+  ws.mergeCells(HR1,1,HR2,1); ws.mergeCells(HR1,2,HR2,2); ws.mergeCells(HR1,3,HR2,3);
+  ws.getCell(HR1,1).value='순번'; ws.getCell(HR1,2).value='성명'; ws.getCell(HR1,3).value='직책';
+  ws.mergeCells(HR1,4,HR1,colGrossSum); ws.getCell(HR1,4).value='급 여 내 역';
+  ws.mergeCells(HR1,colDedStart,HR1,colDedSum); ws.getCell(HR1,colDedStart).value='공 제 내 역';
+  ws.mergeCells(HR1,colNet,HR2,colNet); ws.getCell(HR1,colNet).value='차감\n지급액';
+  PAY.forEach((it,i)=> ws.getCell(HR2,4+i).value=it.t);
+  ws.getCell(HR2,colGrossSum).value='급여계';
+  DED.forEach((k,i)=> ws.getCell(HR2,colDedStart+i).value=DEDUCT_LABEL[k]);
+  ws.getCell(HR2,colAdj).value='기타(연말정산)';
+  ws.getCell(HR2,colDedSum).value='공제계';
+
+  const g={pay:Array(nPay).fill(0),gross:0,ded:Array(nDed).fill(0),adj:0,totDed:0,net:0};
+  rows.forEach(({emp,c},ri)=>{
+    const ep=exportPay(emp,c), adj=yearEndAdjust(emp,c);
+    const R=DATA0+ri; const r=ws.getRow(R);
+    r.getCell(1).value=ri+1; r.getCell(2).value=emp.name||''; r.getCell(3).value=emp.title||'';
+    PAY.forEach((it,i)=>{const v=ep[it.k]||0; r.getCell(4+i).value=v; g.pay[i]+=v;});
+    r.getCell(colGrossSum).value=c.gross; g.gross+=c.gross;
+    DED.forEach((k,i)=>{const v=c.ded[k]||0; r.getCell(colDedStart+i).value=v; g.ded[i]+=v;});
+    r.getCell(colAdj).value=adj; g.adj+=adj;
+    r.getCell(colDedSum).value=c.totDed; g.totDed+=c.totDed;
+    r.getCell(colNet).value=c.net; g.net+=c.net;
+  });
+  const lastRow=DATA0+rows.length;
+  ws.mergeCells(lastRow,1,lastRow,3); ws.getCell(lastRow,1).value='합 계';
+  PAY.forEach((it,i)=> ws.getCell(lastRow,4+i).value=g.pay[i]);
+  ws.getCell(lastRow,colGrossSum).value=g.gross;
+  DED.forEach((k,i)=> ws.getCell(lastRow,colDedStart+i).value=g.ded[i]);
+  ws.getCell(lastRow,colAdj).value=g.adj; ws.getCell(lastRow,colDedSum).value=g.totDed; ws.getCell(lastRow,colNet).value=g.net;
+
+  for(let R=HR1; R<=lastRow; R++){
+    for(let Cc=1; Cc<=totalCols; Cc++){
+      const cell=ws.getCell(R,Cc);
+      cell.border=border;
+      const isHead=R<=HR2, isSum=R===lastRow;
+      cell.alignment={vertical:'middle', horizontal: isHead? 'center' : (Cc<=3? (Cc===1?'center':'left') : 'right'), wrapText:isHead};
+      if(!isHead && Cc>=4) cell.numFmt=NUM;
+      const inPay=Cc>=4&&Cc<=colGrossSum, inDed=Cc>=colDedStart&&Cc<=colDedSum, isNet=Cc===colNet;
+      const isSub=Cc===colGrossSum||Cc===colDedSum||Cc===colNet;
+      if(isHead){ cell.font={bold:true,size:10}; cell.fill=fillOf(inPay?C.payH:inDed?C.dedH:isNet?C.netH:C.head); }
+      else if(isSum){ cell.font={bold:true}; cell.fill=fillOf(isNet?C.netH:C.sum); }
+      else { if(inPay)cell.fill=fillOf(C.pay); else if(inDed)cell.fill=fillOf(C.ded); else if(isNet)cell.fill=fillOf(C.net);
+             if(isSub)cell.font={bold:true}; }
+    }
+  }
+  ws.getColumn(1).width=5; ws.getColumn(2).width=10; ws.getColumn(3).width=10;
+  for(let Cc=4; Cc<=totalCols; Cc++) ws.getColumn(Cc).width=11;
+  ws.getRow(HR1).height=18; ws.getRow(HR2).height=20;
+  return wb;
+}
 window.exportXLSX = async function(){
-  const XLSX=await ensureXLSX();
-  const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.aoa_to_sheet(tableToAOA('expTbl'));
-  XLSX.utils.book_append_sheet(wb,ws,'급여대장');
-  XLSX.writeFile(wb,`${coName()}_급여대장_${A2.state.month}.xlsx`);
-  toast('엑셀 다운로드 완료');
+  try{
+    const ExcelJS=await ensureExcelJS();
+    const rows=allCalc2();
+    const wb=buildLedgerWorkbook(ExcelJS,{
+      rows, PAY:A2.PAY_ITEMS, DED:A2.DEDUCT_KEYS, DEDUCT_LABEL:A2.DEDUCT_LABEL,
+      exportPay, yearEndAdjust,
+      title:`${coName()} · ${monthLabel(A2.state.month)} 급여자료 · 지급일 ${A2.state.monthData.meta.payDate||'-'}`
+    });
+    const buf=await wb.xlsx.writeBuffer();
+    const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url=URL.createObjectURL(blob); const a=document.createElement('a');
+    a.href=url; a.download=`${coName()}_급여대장_${A2.state.month}.xlsx`; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    toast('엑셀 다운로드 완료');
+  }catch(e){ console.error(e); toast('엑셀 생성 실패: '+(e.message||e)); }
 };
 
 /* ========== 9. 연간 합산 (연말정산 상계) ========== */
