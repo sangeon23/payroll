@@ -1406,20 +1406,28 @@ function exportPay(emp,c){
   }
   return p;
 }
-// 연말정산용 차액 = (건강 명세−고지) + (장기요양 명세−고지). 명세가 크면 양수.
-// 연말정산 적립분 = 건강·장기요양 각각 (명세−고지), 항목별로 음수면 0(적립 하한).
-// 음수(고지>명세)인 항목은 신규 적립 없이 기존 적립금에서 상계되므로 회계전달엔 0으로 넘긴다.
-function yearEndAdjust(emp,c){
+// 건강·장기요양 항목별 (명세−고지) 적립분 (양수만, 음수 항목은 0=기존 적립금에서 상계).
+function insAccrualItems(emp,c){
   const md=A2.state.monthData; const ins=md.insurance[emp.id]||{};
-  let adj=0;
+  const r={health:0,care:0};
   ['health','care'].forEach(k=>{
     if(!emp['ins_'+k]) return;
-    const ded=c.ded[k]||0;
     const noticed=A2.insWorkerShare(k, A2.num(ins[k])); // 근로자부담분(건강·요양은 비율1)
-    const itemDiff = ded - noticed;                     // 명세 − 고지
-    if(itemDiff>0) adj += itemDiff;                     // 항목별 하한 0: 양수만 신규 적립
+    const itemDiff=(c.ded[k]||0) - noticed;             // 명세 − 고지
+    r[k]= itemDiff>0 ? itemDiff : 0;
   });
-  return adj;
+  return r;
+}
+// 연말정산 적립분 합계 (회계전달 '기타(연말정산)' 칸)
+function yearEndAdjust(emp,c){ const r=insAccrualItems(emp,c); return r.health+r.care; }
+// 회계전달용 공제액: 건강·장기요양은 실제 고지액(명세−적립분)만, 나머지는 명세 그대로.
+// → 4대보험 칸(고지) + 기타(연말정산) 합이 급여명세표 공제총액(명세)과 일치한다.
+function exportDed(emp,c){
+  const acc=insAccrualItems(emp,c); const d={};
+  A2.DEDUCT_KEYS.forEach(k=>{ d[k]=c.ded[k]||0; });
+  d.health=(c.ded.health||0)-acc.health;
+  d.care=(c.ded.care||0)-acc.care;
+  return d;
 }
 
 /* ========== 4. 급여대장 ========== */
@@ -1999,8 +2007,8 @@ window.renderExport = function(el){
   const g={gross:0,totDed:0,net:0,pay:{},ded:{},adj:0};
   A2.PAY_ITEMS.forEach(it=>g.pay[it.k]=0);A2.DEDUCT_KEYS.forEach(k=>g.ded[k]=0);
   rows.forEach(({emp,c})=>{g.gross+=c.gross;g.totDed+=c.totDed;g.net+=c.net;
-    const ep=exportPay(emp,c);
-    A2.PAY_ITEMS.forEach(it=>g.pay[it.k]+=ep[it.k]||0);A2.DEDUCT_KEYS.forEach(k=>g.ded[k]+=c.ded[k]||0);
+    const ep=exportPay(emp,c); const ed=exportDed(emp,c);
+    A2.PAY_ITEMS.forEach(it=>g.pay[it.k]+=ep[it.k]||0);A2.DEDUCT_KEYS.forEach(k=>g.ded[k]+=ed[k]||0);
     g.adj+=yearEndAdjust(emp,c);});
   // 0은 '-'로, 값 있으면 콤마
   const w=v=>{ v=A2.num(v); return v===0 ? '<span class="dash">-</span>' : won(v); };
@@ -2008,7 +2016,7 @@ window.renderExport = function(el){
   el.innerHTML=`
   <div class="card">
     <div class="card-h"><div><h3>회계사무실 전달 양식</h3>
-      <div class="desc">${coName()} · ${monthLabel(A2.state.month)} 급여자료 · 지급일 ${md.meta.payDate||'-'} · 기타(연말정산)=건강·장기요양 항목별 (명세−고지) 적립분, 음수 항목은 적립금에서 상계되어 0 처리</div></div>
+      <div class="desc">${coName()} · ${monthLabel(A2.state.month)} 급여자료 · 지급일 ${md.meta.payDate||'-'} · 건강·장기요양은 <b>실제 고지액</b>으로 표기하고, 명세와의 차액은 <b>기타(연말정산)</b>으로 이동 → 4대보험 + 기타(연말정산) 합이 명세서 공제총액과 일치</div></div>
       <div style="display:flex;gap:8px">
         <button class="btn" onclick="openMultiExportModal()">📚 여러 달 저장</button>
         <button class="btn green" onclick="exportXLSX()">↧ 엑셀 다운로드 (.xlsx)</button>
@@ -2028,13 +2036,13 @@ window.renderExport = function(el){
       </thead>
       <tbody>
       ${rows.map(({emp,c},i)=>{
-        const ep = exportPay(emp,c);
+        const ep = exportPay(emp,c); const ed = exportDed(emp,c);
         const adj = yearEndAdjust(emp,c);
         return `<tr>
         <td class="c muted">${i+1}</td>
         <td class="name l">${esc(emp.name)||'-'}</td><td class="l muted">${esc(emp.title||'')}</td>
         ${A2.PAY_ITEMS.map(it=>`<td class="cell-pay">${w(ep[it.k])}</td>`).join('')}<td class="cell-pay sumcol"><b>${w(c.gross)}</b></td>
-        ${A2.DEDUCT_KEYS.map(k=>`<td class="cell-ded">${w(c.ded[k])}</td>`).join('')}<td class="cell-ded ${adj===0?'':'accrue'}">${w(adj)}</td><td class="cell-ded sumcol"><b>${w(c.totDed)}</b></td>
+        ${A2.DEDUCT_KEYS.map(k=>`<td class="cell-ded">${w(ed[k])}</td>`).join('')}<td class="cell-ded ${adj===0?'':'accrue'}">${w(adj)}</td><td class="cell-ded sumcol"><b>${w(c.totDed)}</b></td>
         <td class="cell-net"><b>${w(c.net)}</b></td>
       </tr>`;}).join('')}
       </tbody>
@@ -2073,7 +2081,8 @@ async function ensureExcelJS(){
 }
 // 회계전달용 서식 워크북 생성 (병합 헤더·테두리·색·천단위 콤마·합계 강조)
 function addLedgerSheet(wb, sheetName, ctx){
-  const {rows, PAY, DED, DEDUCT_LABEL, exportPay, yearEndAdjust, title} = ctx;
+  const {rows, PAY, DED, DEDUCT_LABEL, exportPay, yearEndAdjust, exportDed, title} = ctx;
+  const dedOf = (emp,c)=> exportDed ? exportDed(emp,c) : c.ded;
   const nPay=PAY.length, nDed=DED.length;
   const colGrossSum = 3+nPay+1;
   const colDedStart = colGrossSum+1;
@@ -2108,12 +2117,12 @@ function addLedgerSheet(wb, sheetName, ctx){
 
   const g={pay:Array(nPay).fill(0),gross:0,ded:Array(nDed).fill(0),adj:0,totDed:0,net:0};
   rows.forEach(({emp,c},ri)=>{
-    const ep=exportPay(emp,c), adj=yearEndAdjust(emp,c);
+    const ep=exportPay(emp,c), adj=yearEndAdjust(emp,c), ed=dedOf(emp,c);
     const R=DATA0+ri; const r=ws.getRow(R);
     r.getCell(1).value=ri+1; r.getCell(2).value=emp.name||''; r.getCell(3).value=emp.title||'';
     PAY.forEach((it,i)=>{const v=ep[it.k]||0; r.getCell(4+i).value=v; g.pay[i]+=v;});
     r.getCell(colGrossSum).value=c.gross; g.gross+=c.gross;
-    DED.forEach((k,i)=>{const v=c.ded[k]||0; r.getCell(colDedStart+i).value=v; g.ded[i]+=v;});
+    DED.forEach((k,i)=>{const v=ed[k]||0; r.getCell(colDedStart+i).value=v; g.ded[i]+=v;});
     r.getCell(colAdj).value=adj; g.adj+=adj;
     r.getCell(colDedSum).value=c.totDed; g.totDed+=c.totDed;
     r.getCell(colNet).value=c.net; g.net+=c.net;
@@ -2166,7 +2175,7 @@ window.exportXLSX = async function(){
     const rows=allCalc2();
     const wb=buildLedgerWorkbook(ExcelJS,{
       rows, PAY:A2.PAY_ITEMS, DED:A2.DEDUCT_KEYS, DEDUCT_LABEL:A2.DEDUCT_LABEL,
-      exportPay, yearEndAdjust,
+      exportPay, yearEndAdjust, exportDed,
       title:`${coName()} · ${monthLabel(A2.state.month)} 급여자료 · 지급일 ${A2.state.monthData.meta.payDate||'-'}`
     });
     const buf=await wb.xlsx.writeBuffer();
@@ -2220,7 +2229,7 @@ window.runMultiExport = async function(){
       const rows=allCalc2();
       addLedgerSheet(wb, `${parseInt(m.split('-')[1],10)}월`, {
         rows, PAY:A2.PAY_ITEMS, DED:A2.DEDUCT_KEYS, DEDUCT_LABEL:A2.DEDUCT_LABEL,
-        exportPay, yearEndAdjust,
+        exportPay, yearEndAdjust, exportDed,
         title:`${coName()} · ${monthLabel(m)} 급여자료 · 지급일 ${data.meta.payDate||'-'}`
       });
     }
