@@ -2009,7 +2009,10 @@ window.renderExport = function(el){
   <div class="card">
     <div class="card-h"><div><h3>회계사무실 전달 양식</h3>
       <div class="desc">${coName()} · ${monthLabel(A2.state.month)} 급여자료 · 지급일 ${md.meta.payDate||'-'} · 기타(연말정산)=건강·장기요양 항목별 (명세−고지) 적립분, 음수 항목은 적립금에서 상계되어 0 처리</div></div>
-      <button class="btn green" onclick="exportXLSX()">↧ 엑셀 다운로드 (.xlsx)</button></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="openMultiExportModal()">📚 여러 달 저장</button>
+        <button class="btn green" onclick="exportXLSX()">↧ 엑셀 다운로드 (.xlsx)</button>
+      </div></div>
     <div class="card-b flush"><div class="tbl-wrap"><table id="expTbl" class="exp-tbl fit">
       <thead>
         <tr>
@@ -2069,7 +2072,7 @@ async function ensureExcelJS(){
   return window.ExcelJS;
 }
 // 회계전달용 서식 워크북 생성 (병합 헤더·테두리·색·천단위 콤마·합계 강조)
-function buildLedgerWorkbook(ExcelJS, ctx){
+function addLedgerSheet(wb, sheetName, ctx){
   const {rows, PAY, DED, DEDUCT_LABEL, exportPay, yearEndAdjust, title} = ctx;
   const nPay=PAY.length, nDed=DED.length;
   const colGrossSum = 3+nPay+1;
@@ -2086,8 +2089,7 @@ function buildLedgerWorkbook(ExcelJS, ctx){
   const C={pay:'FFEAF1FE',ded:'FFEDEFF3',net:'FFF7EEDD',payH:'FFDBE8FB',dedH:'FFDDE3EC',netH:'FFF0DEB8',head:'FFEFF2F7',sum:'FFE7EDF6'};
   const fillOf=argb=>({type:'pattern',pattern:'solid',fgColor:{argb}});
 
-  const wb=new ExcelJS.Workbook();
-  const ws=wb.addWorksheet('급여대장',{views:[{state:'frozen',xSplit:3,ySplit:HR2}]});
+  const ws=wb.addWorksheet(sheetName,{views:[{state:'frozen',xSplit:3,ySplit:HR2}]});
 
   ws.mergeCells(1,1,1,totalCols);
   const tc=ws.getCell(1,1); tc.value=title; tc.font={bold:true,size:13}; tc.alignment={vertical:'middle',horizontal:'left'};
@@ -2141,7 +2143,22 @@ function buildLedgerWorkbook(ExcelJS, ctx){
   ws.getColumn(1).width=5; ws.getColumn(2).width=10; ws.getColumn(3).width=10;
   for(let Cc=4; Cc<=totalCols; Cc++) ws.getColumn(Cc).width=11;
   ws.getRow(HR1).height=18; ws.getRow(HR2).height=20;
+  return ws;
+}
+function buildLedgerWorkbook(ExcelJS, ctx){
+  const wb=new ExcelJS.Workbook();
+  addLedgerSheet(wb, ctx.sheetName||'급여대장', ctx);
   return wb;
+}
+// 현재 회사·월 상태를 잠시 바꿔 특정 월 데이터를 로드해 급여 계산 → 시트로 추가
+async function loadMonthDataFor(m){
+  const {db,doc,getDoc}=window.__fb;
+  let data=null;
+  try{ const snap=await getDoc(doc(db,'companies',A2.state.company,'months',m)); data=snap.exists()?snap.data():null; }catch(e){}
+  if(!data) data={};
+  data.attendance=data.attendance||{}; data.overrides=data.overrides||{};
+  data.insurance=data.insurance||{}; data.meta=data.meta||{payDate:A2.defaultPayDate(m)};
+  return data;
 }
 window.exportXLSX = async function(){
   try{
@@ -2159,6 +2176,62 @@ window.exportXLSX = async function(){
     setTimeout(()=>URL.revokeObjectURL(url),1000);
     toast('엑셀 다운로드 완료');
   }catch(e){ console.error(e); toast('엑셀 생성 실패: '+(e.message||e)); }
+};
+
+/* 여러 달을 시트별로 한 파일에 저장 */
+window.openMultiExportModal = async function(){
+  const year = A2.state.month.split('-')[0];
+  const box=document.getElementById('modalBox');
+  box.innerHTML=`
+    <div class="modal-h"><h3>${year}년 여러 달 엑셀 저장</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-b">
+      <p style="color:var(--ink2);font-size:13px;margin-bottom:4px">저장할 달을 선택하세요. 선택한 달이 각각 <b>시트 1개</b>(1월·2월 …)로 한 파일에 저장됩니다.</p>
+      <p style="color:var(--gray);font-size:12px;margin-bottom:12px" id="meHint">데이터 있는 달 확인 중…</p>
+      <div class="monthpick" id="mePick">${Array.from({length:12},(_,i)=>`<label class="mpick"><input type="checkbox" value="${year}-${String(i+1).padStart(2,'0')}"><span>${i+1}월</span></label>`).join('')}</div>
+    </div>
+    <div class="modal-f">
+      <button class="btn" onclick="closeModal()">취소</button>
+      <button class="btn green" onclick="runMultiExport()">↧ 엑셀 저장</button>
+    </div>`;
+  document.getElementById('modalBg').classList.add('show');
+  // 데이터 있는 달 자동 선택 (+현재 달)
+  const {db,doc,getDoc}=window.__fb; const cur=A2.state.month;
+  for(let m=1;m<=12;m++){
+    const mm=`${year}-${String(m).padStart(2,'0')}`;
+    let has=false;
+    try{ const snap=await getDoc(doc(db,'companies',A2.state.company,'months',mm)); has=snap.exists()&&monthHasData(snap.data(), A2.state.employees); }catch(e){}
+    const inp=document.querySelector(`#mePick input[value="${mm}"]`);
+    if(inp && (has || mm===cur)) inp.checked=true;
+    if(inp && !has){ const sp=inp.parentElement.querySelector('span'); if(sp && mm!==cur) sp.innerHTML+=' <span style="color:#c3c8d1;font-size:11px">(빈 달)</span>'; }
+  }
+  const hint=document.getElementById('meHint'); if(hint) hint.textContent='데이터 있는 달을 자동 선택했어요. 필요하면 조정하세요.';
+};
+window.runMultiExport = async function(){
+  const months=[...document.querySelectorAll('#mePick input:checked')].map(c=>c.value).sort();
+  if(!months.length){ toast('달을 하나 이상 선택하세요'); return; }
+  closeModal(); toast('엑셀 생성 중…');
+  const savedMonth=A2.state.month, savedData=A2.state.monthData;
+  try{
+    const ExcelJS=await ensureExcelJS();
+    const wb=new ExcelJS.Workbook();
+    for(const m of months){
+      const data=await loadMonthDataFor(m);
+      A2.state.month=m; A2.state.monthData=data;   // 계산 함수가 참조하는 상태를 잠시 교체
+      const rows=allCalc2();
+      addLedgerSheet(wb, `${parseInt(m.split('-')[1],10)}월`, {
+        rows, PAY:A2.PAY_ITEMS, DED:A2.DEDUCT_KEYS, DEDUCT_LABEL:A2.DEDUCT_LABEL,
+        exportPay, yearEndAdjust,
+        title:`${coName()} · ${monthLabel(m)} 급여자료 · 지급일 ${data.meta.payDate||'-'}`
+      });
+    }
+    const buf=await wb.xlsx.writeBuffer();
+    const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url=URL.createObjectURL(blob); const a=document.createElement('a');
+    a.href=url; a.download=`${coName()}_급여대장_${months[0].split('-')[0]}.xlsx`; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    toast(`${months.length}개 달 엑셀 저장 완료`);
+  }catch(e){ console.error(e); toast('엑셀 생성 실패: '+(e.message||e)); }
+  finally{ A2.state.month=savedMonth; A2.state.monthData=savedData; }
 };
 
 /* ========== 9. 연간 합산 (연말정산 상계) ========== */
