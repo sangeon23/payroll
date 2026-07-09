@@ -2285,53 +2285,80 @@ function paintAnnual(el){
     {k:'pension',label:'국민연금', type:'ins'}
   ];
   const tab = window._annualTab || 'ins';
-  const ITEMS = ALL_ITEMS.filter(it=> tab==='tax' ? it.type==='tax' : it.type==='ins');
-
-  // 선택된 달만 집계
-  function empAnnual(emp){
-    const r={}; ALL_ITEMS.forEach(it=>r[it.k]={paid:0,noticed:0});
-    selMonths.forEach(m=>{
-      const mdSaved=monthDatas[m];
-      const ov=(mdSaved.overrides||{})[emp.id]||{};
-      const ins=(mdSaved.insurance||{})[emp.id]||{};
-      ALL_ITEMS.forEach(it=>{
-        const paid = ('ded_'+it.k in ov) ? A2.num(ov['ded_'+it.k]) : A2.num(emp['ded_'+it.k]);
-        r[it.k].paid += paid;
-        if(it.type==='ins'){ r[it.k].noticed += A2.insWorkerShare(it.k, A2.num(ins[it.k])); }
-      });
-    });
-    return r;
-  }
-  const rows=emps.map(e=>({emp:e, a:empAnnual(e)}));
-  const tot={}; ITEMS.forEach(it=>tot[it.k]={paid:0,noticed:0,decided:0});
-  rows.forEach(({emp,a})=>ITEMS.forEach(it=>{ tot[it.k].paid+=a[it.k].paid; tot[it.k].noticed+=a[it.k].noticed;
-    tot[it.k].decided += A2.num((decided[emp.id]||{})[it.k]); }));
-
   const won=A2.won;
   const tabBtn=(id,label)=>`<button class="atab ${tab===id?'active':''}" onclick="setAnnualTab('${id}')">${label}</button>`;
-  // 월 선택 칩
   const monthChips = allMonths.map((m,i)=>{
     const on=window._annualMonths.has(m); const has=monthHasData(monthDatas[m], emps);
     return `<button class="mchip ${on?'on':''} ${has?'':'nodata'}" onclick="toggleAnnualMonth('${m}')" title="${has?'데이터 있음':'데이터 없음'}">${i+1}월</button>`;
   }).join('');
-  const helpText = tab==='tax'
-    ? `· <b>납부합계</b>: 선택한 달 급여명세에서 원천징수한 세액 합계<br>· <b>결정세액</b>: 연말정산 결정세액(추징) — 칸에 직접 입력<br>· <b>차액</b> = 납부합계 − 결정세액. <span class="pos">양수</span>면 환급, <span class="neg">음수</span>면 추가납부.`
-    : `· <b>지급(명세)</b>: 선택한 달 급여명세에서 실제 공제한 금액 합계 (고지+α 적립분 포함)<br>· <b>고지</b>: 선택한 달 공단 고지 근로자부담 합계<br>· <b>연말정산</b>: 연말정산 추징(결정) 금액 — 칸에 직접 입력<br>· <b>최종잔액</b> = (지급 − 고지) − 연말정산. <span class="pos">양수</span>면 적립분이 추징금보다 많아 남은 것, <span class="neg">음수</span>면 부족분.`;
 
-  el.innerHTML=`
-  <div class="card">
-    <div class="card-h"><div><h3>${coName()} ${year}년 연간 합산 · 연말정산 상계</h3>
-      <div class="desc">매월 <b>명세 공제 − 고지</b>로 쌓인 적립 차액을 연말정산 결정세액(추징금)과 상계합니다.</div></div>
-      <button class="btn green" onclick="exportAnnualXLSX()">↧ 엑셀</button></div>
-    <div class="card-b" style="padding-bottom:8px">
-      <div class="annualsel">
-        <span class="mlabel">집계 월</span>
-        <div class="mchips">${monthChips}</div>
-        <div class="mactions"><button class="mact" onclick="annualSelectAll(true)">전체 선택</button><span class="mact-div"></span><button class="mact" onclick="annualSelectAll(false)">전체 해제</button></div>
-      </div>
-      <div class="atabs" style="margin-top:12px">${tabBtn('tax','세금 (갑근세·지방소득세)')}${tabBtn('ins','4대보험 (건강·장기요양·국민연금)')}</div>
-    </div>
-    <div class="card-b flush"><div class="tbl-wrap"><table id="annualTbl" class="fit">
+  // 급여 총계용: 선택 달마다 상태를 잠시 교체해 급여 계산 후 합산
+  function computePayRows(){
+    const savedMonth=A2.state.month, savedData=A2.state.monthData;
+    const PAY=A2.PAY_ITEMS;
+    const acc=emps.map(e=>({emp:e, p:Object.fromEntries(PAY.map(it=>[it.k,0])), gross:0, totDed:0, net:0}));
+    try{
+      selMonths.forEach(m=>{
+        const data=monthDatas[m]; if(!data) return;
+        A2.state.month=m;
+        A2.state.monthData={attendance:data.attendance||{}, overrides:data.overrides||{}, insurance:data.insurance||{}, meta:data.meta||{}};
+        emps.forEach((e,i)=>{ const c=A2.calcEmp(e); const ep=exportPay(e,c);
+          PAY.forEach(it=> acc[i].p[it.k]+=(ep[it.k]||0)); acc[i].gross+=c.gross; acc[i].totDed+=c.totDed; acc[i].net+=c.net; });
+      });
+    } finally { A2.state.month=savedMonth; A2.state.monthData=savedData; }
+    return acc;
+  }
+
+  let tableHTML='', helpText='';
+  if(tab==='pay'){
+    const PAY=A2.PAY_ITEMS; const pr=computePayRows();
+    const g={p:Object.fromEntries(PAY.map(it=>[it.k,0])), gross:0, totDed:0, net:0};
+    pr.forEach(r=>{ PAY.forEach(it=>g.p[it.k]+=r.p[it.k]); g.gross+=r.gross; g.totDed+=r.totDed; g.net+=r.net; });
+    const wz=v=>v===0?'<span class="zero">-</span>':won(v);
+    tableHTML=`<table id="annualTbl" class="fit">
+      <thead><tr>
+        <th class="c">순번</th><th class="l">성명</th><th class="l">직책</th>
+        ${PAY.map(it=>`<th class="grp-pay">${it.t}</th>`).join('')}
+        <th class="grp-pay sumcol">급여계</th><th class="grp-ded sumcol">공제계</th><th class="grp-net">차감지급액</th>
+      </tr></thead>
+      <tbody>
+      ${pr.map((r,i)=>`<tr>
+        <td class="c muted">${i+1}</td><td class="name l">${esc(r.emp.name)||'-'}</td><td class="l muted">${esc(r.emp.title||'')}</td>
+        ${PAY.map(it=>`<td class="cell-pay">${wz(r.p[it.k])}</td>`).join('')}
+        <td class="cell-pay sumcol"><b>${won(r.gross)}</b></td>
+        <td class="cell-ded sumcol">${won(r.totDed)}</td>
+        <td class="cell-net"><b>${won(r.net)}</b></td>
+      </tr>`).join('')||`<tr><td colspan="${PAY.length+6}"><div class="empty"><p>직원이 없습니다.</p></div></td></tr>`}
+      </tbody>
+      <tfoot><tr class="sum"><td colspan="3" class="l">합계</td>
+        ${PAY.map(it=>`<td class="cell-pay">${wz(g.p[it.k])}</td>`).join('')}
+        <td class="cell-pay sumcol"><b>${won(g.gross)}</b></td>
+        <td class="cell-ded sumcol">${won(g.totDed)}</td>
+        <td class="cell-net"><b>${won(g.net)}</b></td>
+      </tr></tfoot>
+    </table>`;
+    helpText=`· <b>급여 총계</b>: 선택한 달의 급여 항목을 직원별로 합산했습니다 (급여대장·회계전달과 동일 기준).<br>· <b>급여계</b> = 지급 총액, <b>공제계</b> = 4대보험+세금 공제 합계, <b>차감지급액</b> = 실지급액.`;
+  } else {
+    const ITEMS = ALL_ITEMS.filter(it=> tab==='tax' ? it.type==='tax' : it.type==='ins');
+    function empAnnual(emp){
+      const r={}; ALL_ITEMS.forEach(it=>r[it.k]={paid:0,noticed:0});
+      selMonths.forEach(m=>{
+        const mdSaved=monthDatas[m];
+        const ov=(mdSaved.overrides||{})[emp.id]||{};
+        const ins=(mdSaved.insurance||{})[emp.id]||{};
+        ALL_ITEMS.forEach(it=>{
+          const paid = ('ded_'+it.k in ov) ? A2.num(ov['ded_'+it.k]) : A2.num(emp['ded_'+it.k]);
+          r[it.k].paid += paid;
+          if(it.type==='ins'){ r[it.k].noticed += A2.insWorkerShare(it.k, A2.num(ins[it.k])); }
+        });
+      });
+      return r;
+    }
+    const rows=emps.map(e=>({emp:e, a:empAnnual(e)}));
+    const tot={}; ITEMS.forEach(it=>tot[it.k]={paid:0,noticed:0,decided:0});
+    rows.forEach(({emp,a})=>ITEMS.forEach(it=>{ tot[it.k].paid+=a[it.k].paid; tot[it.k].noticed+=a[it.k].noticed;
+      tot[it.k].decided += A2.num((decided[emp.id]||{})[it.k]); }));
+    tableHTML=`<table id="annualTbl" class="fit">
       <thead>
         <tr><th class="c" rowspan="2">순번</th><th class="l" rowspan="2">성명</th><th class="l" rowspan="2">직책</th>
           ${ITEMS.map(it=> it.type==='tax'? `<th colspan="3">${it.label}</th>` : `<th colspan="4">${it.label}</th>`).join('')}
@@ -2371,7 +2398,26 @@ function paintAnnual(el){
           }
         }).join('')}
       </tr></tfoot>
-    </table></div></div>
+    </table>`;
+    helpText = tab==='tax'
+      ? `· <b>납부합계</b>: 선택한 달 급여명세에서 원천징수한 세액 합계<br>· <b>결정세액</b>: 연말정산 결정세액(추징) — 칸에 직접 입력<br>· <b>차액</b> = 납부합계 − 결정세액. <span class="pos">양수</span>면 환급, <span class="neg">음수</span>면 추가납부.`
+      : `· <b>지급(명세)</b>: 선택한 달 급여명세에서 실제 공제한 금액 합계 (고지+α 적립분 포함)<br>· <b>고지</b>: 선택한 달 공단 고지 근로자부담 합계<br>· <b>연말정산</b>: 연말정산 추징(결정) 금액 — 칸에 직접 입력<br>· <b>최종잔액</b> = (지급 − 고지) − 연말정산. <span class="pos">양수</span>면 적립분이 추징금보다 많아 남은 것, <span class="neg">음수</span>면 부족분.`;
+  }
+
+  el.innerHTML=`
+  <div class="card">
+    <div class="card-h"><div><h3>${coName()} ${year}년 연간 합산 · 연말정산 상계</h3>
+      <div class="desc">매월 <b>명세 공제 − 고지</b>로 쌓인 적립 차액을 연말정산 결정세액(추징금)과 상계합니다.</div></div>
+      <button class="btn green" onclick="exportAnnualXLSX()">↧ 엑셀</button></div>
+    <div class="card-b" style="padding-bottom:8px">
+      <div class="annualsel">
+        <span class="mlabel">집계 월</span>
+        <div class="mchips">${monthChips}</div>
+        <div class="mactions"><button class="mact" onclick="annualSelectAll(true)">전체 선택</button><span class="mact-div"></span><button class="mact" onclick="annualSelectAll(false)">전체 해제</button></div>
+      </div>
+      <div class="atabs" style="margin-top:12px">${tabBtn('pay','급여 총계')}${tabBtn('tax','세금 (갑근세·지방소득세)')}${tabBtn('ins','4대보험 (건강·장기요양·국민연금)')}</div>
+    </div>
+    <div class="card-b flush"><div class="tbl-wrap">${tableHTML}</div></div>
   </div>
   <div class="card"><div class="card-b">
     <p style="font-size:12.5px;color:var(--ink2);line-height:1.7"><b>보는 법</b><br>${helpText}</p>
