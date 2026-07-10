@@ -586,7 +586,11 @@ function standardWeekdayHours(){
 // 연도별 기준값(최저임금·수당) — 그 달이 속한 연도 기준
 function yearCfg(){ return (state.yearRates && state.yearRates[state.month.split('-')[0]]) || {}; }
 function effHourly(emp){ return emp.useMinWage ? num(yearCfg().minWage) : num(emp.hourlyRate); }
-function effAllow(emp,key){ return emp[key+'Yr'] ? num(yearCfg()[key]) : num(emp[key]); }
+// 근속수당·식대·차량유지: 직원별 연도별 값(emp.seniorY/mealY/carY). 그 해 값 없으면 단일값(emp.senior…) 사용
+function effAllow(emp,key){
+  const y=state.month.split('-')[0]; const m=emp[key+'Y'];
+  return (m && m[y]!=null && m[y]!=='') ? num(m[y]) : num(emp[key]);
+}
 // 직원 한 명의 급여 전체 계산 (지급/공제/차감)
 function calcEmp(emp){
   const ov = (state.monthData.overrides[emp.id])||{};
@@ -967,6 +971,8 @@ window.openEmpModal = function(id){
   const e = id? A.state.employees.find(x=>x.id===id) : {id:uid(),type:'fixed',otMult:1.5,holMult:1.5,order:A.state.employees.length+1,
     ins_health:true,ins_care:true,ins_pension:true,ins_emp:true};
   const isVar = e.type==='variable';
+  const curY = A.state.month.split('-')[0]; // 현재 선택 연도 기준으로 수당 입력
+  const av = k=>{ const m=e[k+'Y']; return (m && m[curY]!=null && m[curY]!=='') ? m[curY] : e[k]; };
   const box=document.getElementById('modalBox');
   box.innerHTML=`
     <div class="modal-h"><h3>${id?'직원 정보 수정':'직원 등록'}</h3><button class="x" onclick="closeModal()">×</button></div>
@@ -989,7 +995,7 @@ window.openEmpModal = function(id){
           <div class="fld"><label>기본급 포함 식대 (비과세)</label><input id="f_mealinc" class="wonf" value="${wonInput(e.mealIncluded)}" placeholder="200,000"><div class="hint">기본급에 포함된 비과세 식대. 명세표엔 안 보이고 회계양식에서만 기본급과 분리 표시</div></div>
           <div class="fld"><label>잔업 배율</label><input id="f_otm" type="number" step="0.1" value="${e.otMult??1.5}"><div class="hint">잔업단가 = 시급 × 배율</div></div>
           <div class="fld"><label>특근 배율</label><input id="f_holm" type="number" step="0.1" value="${e.holMult??1.5}"><div class="hint">특근단가 = 시급 × 배율</div></div>
-          <div class="fld"><label>근속수당 (월 고정)</label><input id="f_senior_v" class="wonf" value="${wonInput(e.senior)}"><label class="ylink"><input type="checkbox" id="f_seniorYr_v" ${e.seniorYr?'checked':''} onchange="document.getElementById('f_senior_v').disabled=this.checked"> 연도 기본값 사용</label></div>
+          <div class="fld"><label>근속수당 <span style="color:var(--accent)">(${curY}년)</span></label><input id="f_senior_v" class="wonf" value="${wonInput(av('senior'))}"></div>
         </div>
       </div>
 
@@ -997,7 +1003,7 @@ window.openEmpModal = function(id){
         <div class="sec-title">고정급 설정 (매월 동일)</div>
         <div class="form-grid">
           <div class="fld"><label>기본급 (원)</label><input id="f_base" class="wonf" value="${wonInput(e.base)}"></div>
-          <div class="fld"><label>근속/직책수당</label><input id="f_senior_f" class="wonf" value="${wonInput(e.senior)}"><label class="ylink"><input type="checkbox" id="f_seniorYr_f" ${e.seniorYr?'checked':''} onchange="document.getElementById('f_senior_f').disabled=this.checked"> 연도 기본값 사용</label></div>
+          <div class="fld"><label>근속/직책수당 <span style="color:var(--accent)">(${curY}년)</span></label><input id="f_senior_f" class="wonf" value="${wonInput(av('senior'))}"></div>
           <div class="fld"><label>잔업수당</label><input id="f_ot" class="wonf" value="${wonInput(e.ot)}"></div>
           <div class="fld"><label>특근수당</label><input id="f_hol" class="wonf" value="${wonInput(e.hol)}"></div>
         </div>
@@ -1006,10 +1012,11 @@ window.openEmpModal = function(id){
       <div class="sec-title">기타 수당 (공통)</div>
       <div class="form-grid">
         <div class="fld"><label>상여금</label><input id="f_etcAllow" class="wonf" value="${wonInput(e.etcAllow)}"></div>
-        <div class="fld"><label>차량유지비</label><input id="f_car" class="wonf" value="${wonInput(e.car)}"><label class="ylink"><input type="checkbox" id="f_carYr" ${e.carYr?'checked':''} onchange="document.getElementById('f_car').disabled=this.checked"> 연도 기본값 사용</label></div>
-        <div class="fld"><label>식대 (비과세)</label><input id="f_meal" class="wonf" value="${wonInput(e.meal)}" placeholder="200,000"><label class="ylink"><input type="checkbox" id="f_mealYr" ${e.mealYr?'checked':''} onchange="document.getElementById('f_meal').disabled=this.checked"> 연도 기본값 사용</label></div>
+        <div class="fld"><label>차량유지비 <span style="color:var(--accent)">(${curY}년)</span></label><input id="f_car" class="wonf" value="${wonInput(av('car'))}"></div>
+        <div class="fld"><label>식대 (비과세) <span style="color:var(--accent)">(${curY}년)</span></label><input id="f_meal" class="wonf" value="${wonInput(av('meal'))}" placeholder="200,000"></div>
         <div class="fld"><label>기타</label><input id="f_other" class="wonf" value="${wonInput(e.other)}"></div>
       </div>
+      <div class="hint" style="margin-top:6px;color:var(--accent)">※ <b>근속수당·식대·차량유지</b>는 <b>${curY}년</b> 기준으로 저장됩니다. 다른 해 값은 상단 달력에서 연도를 바꾼 뒤 이 직원을 수정하세요. (사람마다·해마다 다르게 저장돼요)</div>
 
       <div class="sec-title">4대보험 가입</div>
       <div class="form-grid">
@@ -1034,9 +1041,7 @@ window.openEmpModal = function(id){
   document.getElementById('modalBg').classList.add('show');
   attachWonFormat();
   // 연동 체크된 항목은 입력칸 비활성화 (연도 기본값 사용 중)
-  [['f_useMinWage','f_rate'],['f_seniorYr_v','f_senior_v'],['f_seniorYr_f','f_senior_f'],['f_carYr','f_car'],['f_mealYr','f_meal']].forEach(([c,t])=>{
-    const cb=document.getElementById(c), ti=document.getElementById(t); if(cb&&ti) ti.disabled=cb.checked;
-  });
+  { const cb=document.getElementById('f_useMinWage'), ti=document.getElementById('f_rate'); if(cb&&ti) ti.disabled=cb.checked; }
 };
 window.empTypeChange=v=>{document.getElementById('varBox').style.display=v==='variable'?'block':'none';
   document.getElementById('fixBox').style.display=v==='variable'?'none':'block';};
@@ -1046,11 +1051,11 @@ window.closeModal=()=>{ const b=document.getElementById('modalBox'); if(b) b.cla
 window.openYearRatesModal = function(){
   const box=document.getElementById('modalBox');
   box.innerHTML=`
-    <div class="modal-h"><h3>연도별 기준값 · 최저임금·수당</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-h"><h3>연도별 최저임금</h3><button class="x" onclick="closeModal()">×</button></div>
     <div class="modal-b">
-      <p style="color:var(--ink2);font-size:13px;margin-bottom:10px">연도별 <b>최저임금(시급)</b>과 공통 수당 기본값을 정합니다. 직원 편집에서 <b>'최저임금 적용'</b>/<b>'연도 기본값 사용'</b>을 켠 직원은 그 달이 속한 연도의 이 값을 자동으로 씁니다. (해당 연도 값이 없으면 0)</p>
+      <p style="color:var(--ink2);font-size:13px;margin-bottom:10px">연도별 <b>최저임금(시급)</b>을 정합니다. 직원 편집에서 <b>'최저임금 적용'</b>을 켠 변동급 직원은 그 달이 속한 연도의 이 값을 시급으로 자동 사용합니다.<br><span style="color:var(--gray);font-size:12px">※ 근속수당·식대·차량유지는 사람마다 달라서, 직원 편집에서 <b>연도별로 각자</b> 입력합니다.</span></p>
       <table class="yr-tbl"><thead><tr>
-        <th style="width:110px">연도</th><th>최저임금(시급)</th><th>근속수당</th><th>식대</th><th>차량유지</th><th style="width:62px">관리</th>
+        <th style="width:130px">연도</th><th>최저임금 (시급)</th><th style="width:72px">관리</th>
       </tr></thead><tbody id="yrBody"></tbody></table>
       <button class="btn sm" style="margin-top:12px" onclick="addYearRow()">+ 연도 추가</button>
     </div>
@@ -1058,7 +1063,6 @@ window.openYearRatesModal = function(){
       <button class="btn" onclick="closeModal()">취소</button>
       <button class="btn primary" onclick="saveYearRatesModal()">저장</button>
     </div>`;
-  document.getElementById('modalBox').classList.add('wide');
   document.getElementById('modalBg').classList.add('show');
   const yrs=A.state.yearRates||{}; const years=Object.keys(yrs).sort();
   if(years.length) years.forEach(y=>addYearRow(y, yrs[y]));
@@ -1074,10 +1078,7 @@ window.addYearRow = function(y, cfg){
   const tr=document.createElement('tr');
   tr.innerHTML=`
     <td><select class="yr-y">${opts}</select></td>
-    <td><input class="yr-v wonf" data-k="minWage" value="${wv(cfg.minWage)}" inputmode="numeric"></td>
-    <td><input class="yr-v wonf" data-k="senior" value="${wv(cfg.senior)}" inputmode="numeric"></td>
-    <td><input class="yr-v wonf" data-k="meal" value="${wv(cfg.meal)}" inputmode="numeric"></td>
-    <td><input class="yr-v wonf" data-k="car" value="${wv(cfg.car)}" inputmode="numeric"></td>
+    <td><input class="yr-v wonf" data-k="minWage" value="${wv(cfg.minWage)}" inputmode="numeric" placeholder="10,320"></td>
     <td><button class="btn sm danger" onclick="this.closest('tr').remove()">삭제</button></td>`;
   tb.appendChild(tr); attachWonFormat();
 };
@@ -1105,29 +1106,32 @@ window.syncLocalTax = function(){
 window.saveEmpModal = async function(id){
   const V = gid=>{const el=document.getElementById(gid); if(!el)return undefined; return el.classList.contains('wonf')?parseNum(el.value):el.value;};
   const type=document.getElementById('f_type').value;
+  const existing = A.state.employees.find(x=>x.id===id) || {};
+  const curY = A.state.month.split('-')[0];
+  // 근속수당·식대·차량유지: 선택 연도 값만 갱신하고 다른 해 값은 그대로 보존
+  const setYr = (key, fid)=>{ const m={...(existing[key+'Y']||{})}; const v=V(fid);
+    if(v) m[curY]=v; else delete m[curY]; emp[key+'Y']=m; emp[key]=v; };
   const emp={
     id, type,
     name:document.getElementById('f_name').value.trim(),
     title:document.getElementById('f_title').value.trim(),
     order:parseInt(document.getElementById('f_order').value)||1,
-    etcAllow:V('f_etcAllow'),car:V('f_car'),meal:V('f_meal'),other:V('f_other')
+    etcAllow:V('f_etcAllow'), other:V('f_other')
   };
+  setYr('car','f_car'); setYr('meal','f_meal');
   if(type==='variable'){
     emp.hourlyRate=V('f_rate'); emp.otMult=parseFloat(document.getElementById('f_otm').value)||1.5;
-    emp.holMult=parseFloat(document.getElementById('f_holm').value)||1.5; emp.senior=V('f_senior_v');
+    emp.holMult=parseFloat(document.getElementById('f_holm').value)||1.5; setYr('senior','f_senior_v');
     emp.stdHours=parseFloat(document.getElementById('f_std').value)||209;
     emp.mealIncluded=V('f_mealinc');
   } else {
-    emp.base=V('f_base'); emp.senior=V('f_senior_f'); emp.ot=V('f_ot'); emp.hol=V('f_hol');
+    emp.base=V('f_base'); setYr('senior','f_senior_f'); emp.ot=V('f_ot'); emp.hol=V('f_hol');
   }
   A.INS_ENROLL_KEYS.forEach(k=>emp['ins_'+k]=document.getElementById('f_ins_'+k).checked);
   emp.empFull=document.getElementById('f_empFull').checked;
   A.DEDUCT_KEYS.forEach(k=>emp['ded_'+k]=V('f_ded_'+k));
-  // 연도별 기준값 연동 플래그
   const CK=cid=>{const el=document.getElementById(cid); return !!(el&&el.checked);};
   emp.useMinWage = type==='variable' && CK('f_useMinWage');
-  emp.seniorYr = CK(type==='variable'?'f_seniorYr_v':'f_seniorYr_f');
-  emp.carYr = CK('f_carYr'); emp.mealYr = CK('f_mealYr');
   try{
     await A.saveEmployee(emp);
     // 변동급이면 이번 달 근태 기본채우기 (기존 근태 없을 때만)
