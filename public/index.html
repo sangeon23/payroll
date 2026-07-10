@@ -609,7 +609,7 @@ function calcEmp(emp){
     pay.senior = effAllow(emp,'senior');
     pay.etc = num(emp.etcAllow); pay.car=effAllow(emp,'car'); pay.meal=effAllow(emp,'meal'); pay.other=num(emp.other);
     pay._hours = h; pay._rate=rate; pay._otRate=Math.round(rate*otMul); pay._holRate=Math.round(rate*holMul);
-    pay._full = fullAttendance; pay._baseHours = baseHours; pay._stdMonth = stdMonth; pay._mealInc = num(emp.mealIncluded);
+    pay._full = fullAttendance; pay._baseHours = baseHours; pay._stdMonth = stdMonth; pay._mealInc = effAllow(emp,'mealIncluded');
   } else {
     pay.base = num(emp.base);
     pay.senior = effAllow(emp,'senior');
@@ -992,7 +992,7 @@ window.openEmpModal = function(id){
         <div class="form-grid">
           <div class="fld"><label>통상 시급 (원)</label><input id="f_rate" class="wonf" value="${wonInput(e.hourlyRate)}" placeholder="10,320"><div class="hint">만근 시 기본급 = 시급 × 기준시간</div><label class="ylink"><input type="checkbox" id="f_useMinWage" ${e.useMinWage?'checked':''} onchange="document.getElementById('f_rate').disabled=this.checked"> 최저임금 적용 (그 해 최저임금을 시급으로)</label></div>
           <div class="fld"><label>월 기준시간</label><input id="f_std" type="number" value="${e.stdHours??209}"><div class="hint">만근 시 이 시간으로 고정(주휴 포함 보통 209)</div></div>
-          <div class="fld"><label>기본급 포함 식대 (비과세)</label><input id="f_mealinc" class="wonf" value="${wonInput(e.mealIncluded)}" placeholder="200,000"><div class="hint">기본급에 포함된 비과세 식대. 명세표엔 안 보이고 회계양식에서만 기본급과 분리 표시</div></div>
+          <div class="fld"><label>기본급 포함 식대 (비과세) <span style="color:var(--accent)">(${curY}년)</span></label><input id="f_mealinc" class="wonf" value="${wonInput(av('mealIncluded'))}" placeholder="200,000"><div class="hint">기본급에 포함된 비과세 식대. 명세표엔 안 보이고 회계양식에서만 기본급과 분리 표시</div></div>
           <div class="fld"><label>잔업 배율</label><input id="f_otm" type="number" step="0.1" value="${e.otMult??1.5}"><div class="hint">잔업단가 = 시급 × 배율</div></div>
           <div class="fld"><label>특근 배율</label><input id="f_holm" type="number" step="0.1" value="${e.holMult??1.5}"><div class="hint">특근단가 = 시급 × 배율</div></div>
           <div class="fld"><label>근속수당 <span style="color:var(--accent)">(${curY}년)</span></label><input id="f_senior_v" class="wonf" value="${wonInput(av('senior'))}"></div>
@@ -1016,7 +1016,7 @@ window.openEmpModal = function(id){
         <div class="fld"><label>식대 (비과세) <span style="color:var(--accent)">(${curY}년)</span></label><input id="f_meal" class="wonf" value="${wonInput(av('meal'))}" placeholder="200,000"></div>
         <div class="fld"><label>기타</label><input id="f_other" class="wonf" value="${wonInput(e.other)}"></div>
       </div>
-      <div class="hint" style="margin-top:6px;color:var(--accent)">※ <b>근속수당·식대·차량유지</b>는 <b>${curY}년</b> 기준으로 저장됩니다. 다른 해 값은 상단 달력에서 연도를 바꾼 뒤 이 직원을 수정하세요. (사람마다·해마다 다르게 저장돼요)</div>
+      <div class="hint" style="margin-top:6px;color:var(--accent)">※ <b>근속수당·식대·차량유지·기본급포함식대</b>는 <b>${curY}년</b> 기준으로 저장됩니다. 다른 해 값은 상단 달력에서 연도를 바꾼 뒤 이 직원을 수정하세요. (사람마다·해마다 다르게 저장돼요)</div>
 
       <div class="sec-title">4대보험 가입</div>
       <div class="form-grid">
@@ -1123,7 +1123,7 @@ window.saveEmpModal = async function(id){
     emp.hourlyRate=V('f_rate'); emp.otMult=parseFloat(document.getElementById('f_otm').value)||1.5;
     emp.holMult=parseFloat(document.getElementById('f_holm').value)||1.5; setYr('senior','f_senior_v');
     emp.stdHours=parseFloat(document.getElementById('f_std').value)||209;
-    emp.mealIncluded=V('f_mealinc');
+    setYr('mealIncluded','f_mealinc');
   } else {
     emp.base=V('f_base'); setYr('senior','f_senior_f'); emp.ot=V('f_ot'); emp.hol=V('f_hol');
   }
@@ -1564,7 +1564,7 @@ function attachGridNav(inputs){
 // 단, 기본급이 분리할 식대(inc) 이상일 때만 분리한다. 기본급 < inc(0 포함)이면 분리 안 함.
 function exportPay(emp,c){
   const p={}; A2.PAY_ITEMS.forEach(it=>p[it.k]=c.pay[it.k]||0);
-  const inc=A2.num(emp.mealIncluded);
+  const inc=A2.num(c.pay._mealInc);
   const base=c.pay.base||0;
   if(emp.type==='variable' && inc>0 && base>=inc){
     p.base = base - inc;        // 기본급에서 식대 빼기 (기본급 ≥ 식대일 때만)
@@ -2129,7 +2129,7 @@ window.renderSlip = function(el){
   </div>`;
 };
 function slipCard(emp,c,y,mo,payDate){
-  const varMealIncluded = emp.type==='variable' && A2.num(emp.mealIncluded)>0;
+  const varMealIncluded = emp.type==='variable' && A2.num(c.pay._mealInc)>0;
   const payRows=[
     ['기본급',c.pay.base],['근속수당',c.pay.senior],['잔업수당',c.pay.ot],['특근수당',c.pay.hol],
     ['상여금',c.pay.etc],['차량유지비',c.pay.car],
