@@ -52,7 +52,23 @@ input,select{font-family:inherit;font-size:13px}
 .cotab:hover{color:var(--ink);background:#e9edf2}
 .cotab.active{background:var(--card);color:var(--accent);box-shadow:0 1px 2px rgba(20,23,29,.12);font-weight:800}
 .monthsel button{background:none;border:none;font-size:15px;color:var(--ink2);padding:0 5px;line-height:1}
-.monthsel .m{font-weight:700;font-size:14px;min-width:74px;text-align:center}
+.monthsel .m{font-weight:700;font-size:14px;min-width:74px;text-align:center;cursor:pointer;border-radius:6px;padding:2px 4px;transition:.1s}
+.monthsel .m:hover{background:#e9edf2}
+/* 월/연도 선택 팝업 */
+.mpick-pop{position:fixed;z-index:120;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 36px rgba(20,23,29,.20);padding:10px;width:236px;display:none}
+.mpick-pop.show{display:block}
+.mpick-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.mpick-nav{border:none;background:none;font-size:18px;color:var(--ink2);padding:2px 12px;border-radius:7px;cursor:pointer;line-height:1}
+.mpick-nav:hover{background:var(--bg);color:var(--ink)}
+.mpick-title{border:none;background:none;font-weight:800;font-size:14px;color:var(--ink);padding:5px 12px;border-radius:7px;cursor:pointer}
+.mpick-title:hover:not(:disabled){background:var(--accent-soft);color:var(--accent)}
+.mpick-title:disabled{cursor:default}
+.mpick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.mpick-cell{border:none;background:none;padding:12px 0;border-radius:8px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;transition:.1s}
+.mpick-cell:hover{background:var(--accent-soft);color:var(--accent)}
+.mpick-cell.sel{background:var(--accent);color:#fff}
+.mpick-cell.sel:hover{background:var(--accent);color:#fff}
+.mpick-cell.dim{color:var(--gray);opacity:.55}
 .content{padding:22px 24px;flex:1}
 
 /* Buttons */
@@ -623,6 +639,59 @@ function shiftMonth(delta){
 }
 document.getElementById('prevM').onclick=()=>shiftMonth(-1);
 document.getElementById('nextM').onclick=()=>shiftMonth(1);
+
+/* ---------- 월/연도 선택 팝업 ---------- */
+let _mpickView='month', _mpickYear=null;
+function toggleMonthPicker(){
+  const p=document.getElementById('monthPickPop');
+  if(p && p.classList.contains('show')){ closeMonthPicker(); return; }
+  _mpickView='month'; _mpickYear=parseInt(state.month.split('-')[0],10);
+  renderMonthPicker();
+}
+function closeMonthPicker(){ const p=document.getElementById('monthPickPop'); if(p) p.classList.remove('show'); }
+function pickMonth(y,m){
+  state.month=`${y}-${String(m).padStart(2,'0')}`;
+  document.getElementById('curM').textContent=monthLabel(state.month);
+  closeMonthPicker();
+  loadMonth(state.month).then(render);
+}
+function renderMonthPicker(){
+  let p=document.getElementById('monthPickPop');
+  if(!p){
+    p=document.createElement('div'); p.id='monthPickPop'; p.className='mpick-pop';
+    document.body.appendChild(p);
+    document.addEventListener('click', e=>{ if(!p.contains(e.target) && !(e.target.closest && e.target.closest('#curM'))) closeMonthPicker(); });
+  }
+  const [cy,cm]=state.month.split('-').map(Number);
+  if(_mpickView==='month'){
+    p.innerHTML=`
+      <div class="mpick-head">
+        <button class="mpick-nav" data-act="py">‹</button>
+        <button class="mpick-title" data-act="toyear">${_mpickYear}</button>
+        <button class="mpick-nav" data-act="ny">›</button>
+      </div>
+      <div class="mpick-grid">${Array.from({length:12},(_,i)=>{const m=i+1; const sel=(_mpickYear===cy&&m===cm); return `<button class="mpick-cell${sel?' sel':''}" data-m="${m}">${m}</button>`;}).join('')}</div>`;
+  } else {
+    const start=Math.floor(_mpickYear/10)*10;
+    p.innerHTML=`
+      <div class="mpick-head">
+        <button class="mpick-nav" data-act="pd">‹</button>
+        <button class="mpick-title" disabled>${start}-${start+9}</button>
+        <button class="mpick-nav" data-act="nd">›</button>
+      </div>
+      <div class="mpick-grid">${Array.from({length:12},(_,i)=>{const y=start-1+i; const dim=(y<start||y>start+9); const sel=(y===cy); return `<button class="mpick-cell${sel?' sel':''}${dim?' dim':''}" data-y="${y}">${y}</button>`;}).join('')}</div>`;
+  }
+  const anchor=document.getElementById('curM'); const r=anchor.getBoundingClientRect();
+  p.style.top=(r.bottom+7)+'px';
+  p.style.left=Math.max(8, Math.min(window.innerWidth-244, r.left+r.width/2-118))+'px';
+  p.classList.add('show');
+  p.querySelectorAll('[data-act]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); const a=b.dataset.act;
+    if(a==='py')_mpickYear--; else if(a==='ny')_mpickYear++; else if(a==='pd')_mpickYear-=10; else if(a==='nd')_mpickYear+=10; else if(a==='toyear')_mpickView='decade';
+    renderMonthPicker(); });
+  p.querySelectorAll('[data-m]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); pickMonth(_mpickYear, parseInt(b.dataset.m,10)); });
+  p.querySelectorAll('[data-y]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); _mpickYear=parseInt(b.dataset.y,10); _mpickView='month'; renderMonthPicker(); });
+}
+document.getElementById('curM').onclick=e=>{ e.stopPropagation(); toggleMonthPicker(); };
 
 /* ---------- 렌더 디스패치 ---------- */
 function render(){
