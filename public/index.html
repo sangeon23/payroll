@@ -422,7 +422,8 @@ table.fit tbody tr:hover td{background:#eef4ff}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot }
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, CACHE_SIZE_UNLIMITED,
+  doc, getDoc, setDoc, collection, getDocs, onSnapshot }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -434,7 +435,21 @@ const firebaseConfig = {
   appId: "1:640036161635:web:ec9a65874da0b446651056"
 };
 const fbApp = initializeApp(firebaseConfig);
-const db = getFirestore(fbApp);
+// 영구 캐시(IndexedDB): 새로고침·달 이동 시 서버 재읽기를 줄여 무료 한도(읽기) 초과 방지.
+// 시크릿 모드 등 IndexedDB 불가 환경에서는 메모리 모드로 자동 폴백.
+let db;
+try {
+  db = initializeFirestore(fbApp, {
+    ignoreUndefinedProperties: true,
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(), // 여러 탭이 캐시 공유
+      cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+    }),
+  });
+} catch (e) {
+  console.warn('영구 캐시 초기화 실패, 메모리 모드로 동작:', e);
+  db = initializeFirestore(fbApp, { ignoreUndefinedProperties: true });
+}
 window.__fb = { db, doc, getDoc, setDoc, collection, getDocs, onSnapshot };
 
 /* ===== 급여관리 — 코어 로직 ===== */
@@ -947,15 +962,14 @@ function attachEmpDragSort(){
 async function saveEmpOrder(){
   const tbody=document.getElementById('empTbody'); if(!tbody) return;
   const ids=[...tbody.querySelectorAll('tr.draggable-row')].map(tr=>tr.dataset.id);
-  const {db,doc,setDoc,getDoc}=window.__fb;
+  const {db,doc,setDoc}=window.__fb;
   try{
-    // order를 새 순서대로 부여하고 저장
+    // order를 새 순서대로 부여하고 저장 (state.employees는 onSnapshot으로 항상 최신 → 저장 전 getDoc 불필요)
     for(let i=0;i<ids.length;i++){
       const emp=A.state.employees.find(e=>e.id===ids[i]);
       if(emp){ emp.order=i+1;
         const ref=doc(db,'companies',A.state.company,'employees',emp.id);
-        const snap=await getDoc(ref); const data=snap.exists()?snap.data():emp;
-        data.order=i+1; await setDoc(ref,data);
+        await setDoc(ref,emp);
       }
     }
     // 로컬 정렬 반영 후 재렌더
