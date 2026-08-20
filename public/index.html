@@ -310,6 +310,13 @@ table.fit tbody tr:hover td{background:#eef4ff}
 .slip .stot{display:flex;justify-content:space-between;padding:7px 12px;font-weight:800;background:#f0f3f7;border-top:1px solid var(--ink)}
 .slip .net{text-align:center;padding:10px;font-size:15px;font-weight:800;background:var(--ink);color:#fff}
 .slip .foot{text-align:center;padding:8px;font-size:11px;color:var(--gray)}
+/* 하단 잔업·특근 시간/단가/금액 표 (변동급) */
+.slip .otd{border-top:1.5px solid var(--ink);font-size:11px}
+.slip .otd .otrow{display:grid;grid-template-columns:1fr 1.1fr 0.8fr 1.2fr}
+.slip .otd .otrow>span{padding:5px 10px;text-align:right;border-bottom:1px solid var(--line2);border-right:1px solid var(--line2)}
+.slip .otd .otrow>span:last-child{border-right:none}
+.slip .otd .otrow>span.k{text-align:left;color:var(--ink2);font-weight:700}
+.slip .otd .otrow.oth>span{background:var(--bg);color:var(--ink2);font-weight:700;font-size:10px}
 
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;
   padding:11px 20px;border-radius:9px;font-size:13px;font-weight:600;z-index:200;opacity:0;transition:.25s;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.25)}
@@ -2205,7 +2212,12 @@ function slipCard(emp,c,y,mo,payDate){
   let otInfo='';
   if(emp.type==='variable'){
     const h=c.pay._hours||{};
-    otInfo=`<div class="srow" style="font-size:10.5px;color:#888;border-top:1px solid var(--line)"><span>잔업 ${h.overtime||0}h × ${won(c.pay._otRate)}</span><span>특근 ${h.holiday||0}h × ${won(c.pay._holRate)}</span></div>`;
+    const otrow=(label,rate,hrs,amt)=>`<div class="otrow"><span class="k">${label}</span><span>${won(rate)}</span><span>${A2.num(hrs)}h</span><span>${won(amt)}</span></div>`;
+    otInfo=`<div class="otd">
+      <div class="otrow oth"><span class="k">구분</span><span>시급단가</span><span>시간</span><span>금액</span></div>
+      ${otrow('잔업', c.pay._otRate, h.overtime, c.pay.ot)}
+      ${otrow('특근', c.pay._holRate, h.holiday, c.pay.hol)}
+    </div>`;
   }
   return `<div class="slip">
     <div class="sh">${y}년 ${mo}월분 급여명세표</div>
