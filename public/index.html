@@ -297,6 +297,8 @@ table.fit tbody tr:hover td{background:#eef4ff}
 /* Payslip print */
 .slips{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
 .slip-page{display:contents} /* 화면에선 래퍼 무시(기존 그리드 유지), 인쇄 시에만 좌우 배치 */
+.slipsel{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:20px;padding:6px 13px;font-size:13px;cursor:pointer;user-select:none;background:#fff}
+.slipsel input{margin:0;cursor:pointer}
 /* 급여명세표 — 예전 양식처럼 가독성 좋은 4칸 표 */
 .slip{border:2px solid #1f2430;background:#fff;font-size:12.5px;color:#111;overflow:hidden}
 .slip .sh{text-align:center;padding:12px 8px;border-bottom:2px solid #1f2430;font-weight:800;font-size:17px;letter-spacing:.5px}
@@ -2195,20 +2197,50 @@ async function paintDiffLedger(){
 }
 
 /* ========== 7. 급여명세표 ========== */
+// 인쇄 대상 직원 선택 (기본: 전체 선택)
+function paintSlips(){
+  const host=document.querySelector('.slips'); if(!host) return;
+  const rows=allCalc2().filter(({emp})=>emp.name);
+  const [y,mo]=A2.state.month.split('-'); const md=A2.state.monthData;
+  const sel=window._slipSel||new Set();
+  const chosen=rows.filter(({emp})=>sel.has(emp.id));
+  const cnt=document.getElementById('slipSelCount'); if(cnt) cnt.textContent=chosen.length;
+  if(!chosen.length){ host.innerHTML='<div class="empty no-print"><p>인쇄할 직원을 선택하세요.</p></div>'; return; }
+  const cards=chosen.map(({emp,c})=>slipCard(emp,c,y,mo,md.meta.payDate));
+  let out=''; for(let i=0;i<cards.length;i+=2){ out+=`<div class="slip-page">${cards[i]}${cards[i+1]||''}</div>`; }
+  host.innerHTML=out;
+}
+window.toggleSlipSel=function(id,on){
+  if(!window._slipSel) window._slipSel=new Set();
+  if(on) window._slipSel.add(id); else window._slipSel.delete(id);
+  paintSlips();
+};
+window.slipSelectAll=function(on){
+  const rows=allCalc2().filter(({emp})=>emp.name);
+  window._slipSel = on ? new Set(rows.map(r=>r.emp.id)) : new Set();
+  document.querySelectorAll('.slipsel-cb').forEach(cb=>cb.checked=on);
+  paintSlips();
+};
 window.renderSlip = function(el){
   const rows=allCalc2().filter(({emp})=>emp.name);
   const md=A2.state.monthData; const [y,mo]=A2.state.month.split('-');
+  window._slipSel = new Set(rows.map(r=>r.emp.id)); // 페이지 진입 시 전체 선택
   el.innerHTML=`
-  <div class="card no-print"><div class="card-h"><div><h3>급여명세표</h3><div class="desc">${y}년 ${mo}월분 · 지급일 ${md.meta.payDate||'-'} · ${rows.length}명</div></div>
-    <button class="btn primary" onclick="window.print()">🖨 인쇄 / PDF 저장</button></div></div>
-  <div class="slips">
-    ${(()=>{ const cards=rows.map(({emp,c})=>slipCard(emp,c,y,mo,md.meta.payDate));
-      if(!cards.length) return '<div class="empty"><p>명세표를 출력할 직원이 없습니다.</p></div>';
-      // 인쇄 시 A4 한 장에 2명씩 좌우로: 두 장씩 페이지 래퍼로 묶음
-      let out=''; for(let i=0;i<cards.length;i+=2){ out+=`<div class="slip-page">${cards[i]}${cards[i+1]||''}</div>`; }
-      return out;
-    })()}
-  </div>`;
+  <div class="card no-print"><div class="card-h"><div><h3>급여명세표</h3><div class="desc">${y}년 ${mo}월분 · 지급일 ${md.meta.payDate||'-'} · <b id="slipSelCount">${rows.length}</b>명 선택됨</div></div>
+    <button class="btn primary" onclick="window.print()">🖨 인쇄 / PDF 저장</button></div>
+    ${rows.length?`<div class="card-b">
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+        <span class="muted" style="font-size:12px;margin-right:4px">인쇄할 직원 선택</span>
+        <button class="btn sm" onclick="slipSelectAll(true)">전체 선택</button>
+        <button class="btn sm" onclick="slipSelectAll(false)">전체 해제</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${rows.map(({emp})=>`<label class="slipsel"><input type="checkbox" class="slipsel-cb" checked onchange="toggleSlipSel('${emp.id}',this.checked)">${esc(emp.name)}</label>`).join('')}
+      </div>
+    </div>`:''}
+  </div>
+  <div class="slips"></div>`;
+  paintSlips();
 };
 function slipCard(emp,c,y,mo,payDate){
   const varMealIncluded = emp.type==='variable' && A2.num(c.pay._mealInc)>0;
