@@ -280,6 +280,8 @@ table.fit tbody tr:hover td{background:#eef4ff}
 .mact-div{width:1px;height:13px;background:var(--line)}
 /* 직원 목록 드래그 정렬 */
 .draggable-row{transition:background .1s}
+.emp-retired td{background:#fafafa;color:#aaa}
+.emp-retired td.name{color:#888}
 .drag-handle{cursor:grab;user-select:none;font-weight:600}
 .drag-handle:active{cursor:grabbing}
 .draggable-row.dragging{opacity:.4;background:var(--accent-soft)}
@@ -610,6 +612,12 @@ function effAllow(emp,key){
   const y=state.month.split('-')[0]; const m=emp[key+'Y'];
   return (m && m[y]!=null && m[y]!=='') ? num(m[y]) : num(emp[key]);
 }
+// 퇴사 처리: emp.retireDate('YYYY-MM-DD')가 있으면 '퇴사한 월'까지는 표시,
+// 그 이후 월(m)에는 근태·급여 등 월별 페이지에서 숨김. m은 'YYYY-MM'.
+function retireMonth(emp){ return emp.retireDate ? emp.retireDate.slice(0,7) : ''; }
+function isActive(emp, m){ const r=retireMonth(emp); return !r || (m||state.month) <= r; }
+// 해당 월에 표시할(재직 중인) 직원 목록
+function visibleEmployees(m){ return state.employees.filter(e=>isActive(e, m||state.month)); }
 // 직원 한 명의 급여 전체 계산 (지급/공제/차감)
 function calcEmp(emp){
   const ov = (state.monthData.overrides[emp.id])||{};
@@ -754,7 +762,7 @@ function render(){
 window.APP = { state, COMPANIES, calcEmp, attHours, fillDefaultAttendance, standardWeekdayHours, PAY_ITEMS, DEDUCT_KEYS, DEDUCT_LABEL, INS_KEYS, INS_LABEL, INS_CONFIG, INS_ENROLL_KEYS, insDiffKeysFor, insWorkerShare, insTotalAmount,
   won, wonInput, parseNum, num, uid, saveEmployee, deleteEmployeeDoc, loadEmployees, saveMonthDebounced,
   toast, render, go, daysInMonth, dowOf, DOW, monthLabel, PAGES, defaultPayDate, switchCompany,
-  effHourly, effAllow, yearCfg, saveYearRates };
+  effHourly, effAllow, yearCfg, saveYearRates, isActive, visibleEmployees, retireMonth };
 
 /* ===== 페이지 확정(잠금) — 입력 페이지 실수 방지 ===== */
 window.__LOCK_LABEL = { att:'근태현황', ledger:'급여대장', ins:'4대보험 고지' };
@@ -853,7 +861,7 @@ const {won,wonInput,parseNum,num,uid,toast,daysInMonth,dowOf,DOW,monthLabel} = A
 
 /* 헬퍼: 전 직원 계산 결과 */
 function allCalc(){
-  return A.state.employees.map(e=>({emp:e,c:A.calcEmp(e)}));
+  return A.visibleEmployees().map(e=>({emp:e,c:A.calcEmp(e)}));
 }
 function grandTotals(){
   const rows=allCalc(); const g={gross:0,totDed:0,net:0,ded:{}};
@@ -873,7 +881,8 @@ window.renderDash = function(el){
   const md=A.state.monthData;
   // 4대보험 차액 (국민연금 근로자 50%, 고용보험은 회사전액부담 직원 제외)
   let insTot=0, dedInsTot=0;
-  A.state.employees.forEach(e=>{
+  const actEmps=A.visibleEmployees();
+  actEmps.forEach(e=>{
     const ins=md.insurance[e.id]||{}; const c=A.calcEmp(e);
     A.insDiffKeysFor(e).forEach(k=>{
       if(e['ins_'+k]) insTot+=A.insWorkerShare(k,num(ins[k]));
@@ -881,8 +890,8 @@ window.renderDash = function(el){
     });
   });
   const diff = dedInsTot - insTot; // 명세 − 고지 (차액정산·회계전달과 동일)
-  const cnt=A.state.employees.length;
-  const varCnt=A.state.employees.filter(e=>e.type==='variable').length;
+  const cnt=actEmps.length;
+  const varCnt=actEmps.filter(e=>e.type==='variable').length;
 
   el.innerHTML = `
   <div class="stats">
@@ -911,22 +920,39 @@ window.renderDash = function(el){
 };
 
 /* ========== 2. 직원 관리 ========== */
+window._empFilter = window._empFilter || 'active'; // active | retired | all
+window.setEmpFilter = function(f){ window._empFilter=f; A.render(); };
 window.renderEmp = function(el){
-  const emps=A.state.employees;
+  const all=A.state.employees;
+  const activeCnt=all.filter(e=>!A.retireMonth(e)).length;
+  const retiredCnt=all.length-activeCnt;
+  const flt=window._empFilter;
+  const emps = flt==='retired' ? all.filter(e=>A.retireMonth(e))
+             : flt==='all'     ? all
+             :                   all.filter(e=>!A.retireMonth(e));
+  const canDrag = flt!=='retired'; // 퇴사자만 볼 땐 정렬 비활성
+  const fbtn=(v,lbl)=>`<button class="btn sm${flt===v?' primary':''}" onclick="setEmpFilter('${v}')">${lbl}</button>`;
   el.innerHTML=`
   <div class="card">
-    <div class="card-h"><div><h3>직원 목록</h3><div class="desc">고정급/변동급 구분 · 기본 공제값 · 4대보험 설정 · <b>순번 칸을 잡고 드래그하면 순서 변경</b></div></div>
+    <div class="card-h"><div><h3>직원 목록</h3><div class="desc">재직/퇴사 분류 · 고정급/변동급 · 기본 공제값 · 4대보험 · <b>순번 칸을 잡고 드래그하면 순서 변경</b></div></div>
       <div style="display:flex;gap:8px">
         <button class="btn" onclick="openYearRatesModal()">⚙ 연도별 기준</button>
         <button class="btn" onclick="migrateMeal()">식대→기본급포함 일괄전환</button>
         <button class="btn primary" onclick="openEmpModal()">+ 직원 등록</button></div></div>
+    <div class="card-b" style="padding-bottom:0;display:flex;gap:6px;align-items:center">
+      <span class="muted" style="font-size:12px;margin-right:4px">분류</span>
+      ${fbtn('active','재직중 '+activeCnt)}
+      ${fbtn('retired','퇴사 '+retiredCnt)}
+      ${fbtn('all','전체 '+all.length)}
+      ${!canDrag?'<span class="muted" style="font-size:11px;margin-left:8px">· 퇴사자 목록은 순서 변경이 비활성화됩니다</span>':''}
+    </div>
     <div class="card-b flush"><div class="tbl-wrap"><table>
       <thead><tr><th class="c">순번</th><th class="l">성명</th><th class="l">직책</th><th class="c">구분</th>
         <th>기본급/시급</th><th class="c">잔업배율</th><th class="c">4대보험</th><th class="c">관리</th></tr></thead>
       <tbody id="empTbody">
-      ${emps.map((e,i)=>`<tr draggable="true" data-id="${e.id}" class="draggable-row">
-        <td class="c muted drag-handle" title="드래그하여 순서 변경">⠿ ${i+1}</td>
-        <td class="name l">${esc(e.name)||'<span class="zero">미입력</span>'}</td>
+      ${emps.map((e,i)=>{ const rm=A.retireMonth(e); return `<tr ${canDrag?'draggable="true"':''} data-id="${e.id}" class="${canDrag?'draggable-row':''}${rm?' emp-retired':''}">
+        <td class="c muted ${canDrag?'drag-handle':''}" ${canDrag?'title="드래그하여 순서 변경"':''}>${canDrag?'⠿ ':''}${i+1}</td>
+        <td class="name l">${esc(e.name)||'<span class="zero">미입력</span>'}${rm?`<span class="tag" style="background:#eee;color:#999;margin-left:6px">퇴사 ${rm.replace('-','.')}</span>`:''}</td>
         <td class="l muted">${esc(e.title||'')}</td>
         <td class="c">${e.type==='variable'?'<span class="tag var">변동급</span>':'<span class="tag fixed">고정급</span>'}</td>
         <td>${e.type==='variable'?won(A.effHourly(e))+'<span class="muted" style="font-size:10px">/h</span>'+(e.useMinWage?'<span class="tag" style="background:var(--green-soft);color:#0a6b3d;margin-left:4px">최저</span>':''):won(e.base)}</td>
@@ -935,11 +961,11 @@ window.renderEmp = function(el){
         <td class="c"><button class="btn sm" onclick="openEmpModal('${e.id}')">수정</button>
           <button class="btn sm" onclick="openCopyModal('${e.id}')">복사</button>
           <button class="btn sm danger" onclick="delEmp('${e.id}')">삭제</button></td>
-      </tr>`).join('')||`<tr><td colspan="8"><div class="empty"><div class="big">◱</div><p>등록된 직원이 없습니다.</p><button class="btn primary" onclick="openEmpModal()">첫 직원 등록하기</button></div></td></tr>`}
+      </tr>`;}).join('')||`<tr><td colspan="8"><div class="empty"><div class="big">◱</div><p>${flt==='retired'?'퇴사한 직원이 없습니다.':'등록된 직원이 없습니다.'}</p>${flt==='retired'?'':'<button class="btn primary" onclick="openEmpModal()">첫 직원 등록하기</button>'}</div></td></tr>`}
       </tbody>
     </table></div></div>
   </div>`;
-  attachEmpDragSort();
+  if(canDrag) attachEmpDragSort();
 };
 // 직원 목록 드래그 정렬
 function attachEmpDragSort(){
@@ -1051,6 +1077,12 @@ window.openEmpModal = function(id){
         }).join('')}
       </div>
       <div class="hint" style="margin-top:8px;color:#888">※ 세금·4대보험은 매월 고지·조정되므로, 여기 입력값은 기본값이며 급여대장에서 월별로 덮어쓸 수 있습니다.</div>
+
+      <div class="sec-title">재직 상태</div>
+      <div class="form-grid">
+        <div class="fld"><label>퇴사일 (선택)</label><input id="f_retireDate" type="date" value="${esc(e.retireDate||'')}">
+          <div class="hint">퇴사일을 입력하면 <b>그 달까지만</b> 근태·급여대장·명세표 등에 표시되고, <b>다음 달부터</b> 자동으로 숨겨집니다. 비우면 재직중입니다.</div></div>
+      </div>
     </div>
     <div class="modal-f">
       <button class="btn" onclick="closeModal()">취소</button>
@@ -1150,10 +1182,12 @@ window.saveEmpModal = async function(id){
   A.DEDUCT_KEYS.forEach(k=>emp['ded_'+k]=V('f_ded_'+k));
   const CK=cid=>{const el=document.getElementById(cid); return !!(el&&el.checked);};
   emp.useMinWage = type==='variable' && CK('f_useMinWage');
+  // 퇴사일: 값이 있으면 저장, 비우면 필드 자체를 빼서 재직중 처리(setDoc 전체 대체)
+  { const rd=(document.getElementById('f_retireDate')||{}).value; if(rd) emp.retireDate=rd; }
   try{
     await A.saveEmployee(emp);
-    // 변동급이면 이번 달 근태 기본채우기 (기존 근태 없을 때만)
-    if(type==='variable'){
+    // 변동급이면 이번 달 근태 기본채우기 (기존 근태 없을 때만, 퇴사 이후 달은 제외)
+    if(type==='variable' && A.isActive(emp, A.state.month)){
       const filled = A.fillDefaultAttendance(emp.id, false);
       if(filled) A.saveMonthDebounced();
     }
@@ -1201,6 +1235,7 @@ window.doCopy = async function(id){
       clone.id=A.uid();
       clone.name = cnt>1 ? `${newName||src.name} ${i+1}` : (newName||`${src.name} (사본)`);
       clone.order=baseOrder+i+1;
+      delete clone.retireDate; // 복사된 직원은 재직중으로 시작
       await saveEmployeeTo(targetCo, clone);
       // 변동급이면 대상 회사·현재 월 근태 기본채우기
       if(clone.type==='variable' && targetCo===A.state.company){
@@ -1244,7 +1279,7 @@ window.migrateMeal = async function(){
 
 /* ========== 3. 근태현황 ========== */
 window.renderAtt = function(el){
-  const vars=A.state.employees.filter(e=>e.type==='variable');
+  const vars=A.visibleEmployees().filter(e=>e.type==='variable');
   const dim=daysInMonth(A.state.month);
   const days=Array.from({length:dim},(_,i)=>i+1);
   if(!vars.length){ el.innerHTML=`<div class="card"><div class="empty"><div class="big">◷</div><p>변동급 직원이 없습니다.<br>직원 관리에서 '변동급'으로 등록하면 여기서 근태를 입력합니다.</p><button class="btn primary" onclick="APP.go('emp')">직원 관리로</button></div></div>`; return; }
@@ -1277,7 +1312,7 @@ window.renderAtt = function(el){
 // 특근일 지정 팝업
 window.openHolidayModal = function(){
   if(window.isLocked('att')){ A.toast('🔒 확정된 달입니다. 잠금 해제 후 수정하세요.'); return; }
-  const vars=A.state.employees.filter(e=>e.type==='variable');
+  const vars=A.visibleEmployees().filter(e=>e.type==='variable');
   const box=document.getElementById('modalBox');
   box.innerHTML=`
     <div class="modal-h"><h3>${monthLabel(A.state.month)} 특근일 지정</h3><button class="x" onclick="closeHolidayModal()">×</button></div>
@@ -1296,7 +1331,7 @@ window.openAttCopyModal = function(){
   const curCo=A.COMPANIES.find(c=>c.id===A.state.company);
   const others=A.COMPANIES.filter(c=>c.id!==A.state.company);
   const cur=A.state.month;
-  const vars=A.state.employees.filter(e=>e.type==='variable');
+  const vars=A.visibleEmployees().filter(e=>e.type==='variable');
   const months=[];
   { const [y,m]=cur.split('-').map(Number);
     for(let off=-2; off<=9; off++){ let yy=y,mm=m+off; while(mm<1){mm+=12;yy--;}while(mm>12){mm-=12;yy++;} months.push(`${yy}-${String(mm).padStart(2,'0')}`); } }
@@ -1502,7 +1537,7 @@ function attachAttHandlers(){
 }
 window.refillAll = function(){
   if(window.isLocked('att')){ A.toast('🔒 확정된 달입니다. 잠금 해제 후 수정하세요.'); return; }
-  const vars=A.state.employees.filter(e=>e.type==='variable');
+  const vars=A.visibleEmployees().filter(e=>e.type==='variable');
   if(!confirm(`${monthLabel(A.state.month)} 변동급 ${vars.length}명의 평일근무·잔업을 기본값(월~금 8h+2h)으로 다시 채웁니다.\n토요일 특근 입력은 유지됩니다. 진행할까요?`))return;
   vars.forEach(e=>A.fillDefaultAttendance(e.id,true));
   A.saveMonthDebounced(); A.render(); toast('기본근무를 다시 채웠습니다');
@@ -1527,7 +1562,7 @@ const A2 = window.APP;
 const {won,wonInput,parseNum,num,toast,monthLabel}=A2;
 const esc=window.__esc;
 
-function allCalc2(){ return A2.state.employees.map(e=>({emp:e,c:A2.calcEmp(e)})); }
+function allCalc2(){ return A2.visibleEmployees().map(e=>({emp:e,c:A2.calcEmp(e)})); }
 function coName(){ const c=A2.COMPANIES.find(x=>x.id===A2.state.company); return c?c.name:''; }
 
 /* 엑셀식 셀 이동: 입력칸에 Tab/화살표/Enter 네비게이션 부착.
@@ -1712,7 +1747,7 @@ function updateLedgerRow(el, empId){
   updateLedgerFoot(el);
 }
 function updateLedgerFoot(el){
-  const rows=A2.state.employees.map(e=>({emp:e,c:A2.calcEmp(e)}));
+  const rows=A2.visibleEmployees().map(e=>({emp:e,c:A2.calcEmp(e)}));
   const g={gross:0,totDed:0,net:0,pay:{},ded:{}}; A2.PAY_ITEMS.forEach(it=>g.pay[it.k]=0); A2.DEDUCT_KEYS.forEach(k=>g.ded[k]=0);
   rows.forEach(({c})=>{g.gross+=c.gross;g.totDed+=c.totDed;g.net+=c.net; A2.PAY_ITEMS.forEach(it=>g.pay[it.k]+=c.pay[it.k]||0); A2.DEDUCT_KEYS.forEach(k=>g.ded[k]+=c.ded[k]||0);});
   const foot=el.querySelector('tfoot tr'); if(!foot) return;
@@ -1729,7 +1764,7 @@ function updateLedgerFoot(el){
 /* 이후 12개월에 공제 적용 — 현재 달 각 직원의 실제 공제값을 이후 달 override로 저장 */
 window.openDedForwardModal = function(){
   const cur=A2.state.month;
-  const rows=A2.state.employees;
+  const rows=A2.visibleEmployees();
   // 미리보기: 현재 달 각 직원 실제 공제
   const preview=rows.map(e=>{
     const c=A2.calcEmp(e);
@@ -1775,7 +1810,7 @@ function nextMonth(m, off){
 }
 window.applyDedForward = async function(){
   const cur=A2.state.month;
-  const rows=A2.state.employees;
+  const rows=A2.visibleEmployees();
   // 적용 범위 계산
   const mode=document.querySelector('input[name="fwdmode"]:checked').value;
   let months=[];
@@ -1809,7 +1844,7 @@ window.applyDedForward = async function(){
 
 /* ========== 5. 4대보험 고지 ========== */
 window.renderIns = function(el){
-  const md=A2.state.monthData; const emps=A2.state.employees;
+  const md=A2.state.monthData; const emps=A2.visibleEmployees();
   const gIn={}, gTot={}, gWorker={}; A2.INS_KEYS.forEach(k=>{gIn[k]=0;gTot[k]=0;gWorker[k]=0;}); let gInAll=0, gTotAll=0;
   // 열 그룹: w=근로자분 입력(건강·장기요양), t=총액 입력(국민연금·고용), c=회사부담(산재)
   const INS_GRP={health:'w',care:'w',pension:'t',emp:'t',injury:'c'};
@@ -1886,7 +1921,7 @@ window.renderIns = function(el){
 };
 // 4대보험 고지: 합계 두 줄만 다시 계산해 갱신 (커서 유지)
 function updateInsTotals(el){
-  const md=A2.state.monthData; const emps=A2.state.employees;
+  const md=A2.state.monthData; const emps=A2.visibleEmployees();
   const gIn={}, gTot={}, gWorker={}; A2.INS_KEYS.forEach(k=>{gIn[k]=0;gTot[k]=0;gWorker[k]=0;});
   emps.forEach(e=>{ const ins=md.insurance[e.id]||{};
     A2.INS_KEYS.forEach(k=>{ const enrolled=k==='injury'?true:e['ins_'+k]; if(!enrolled)return;
