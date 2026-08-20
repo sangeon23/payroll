@@ -305,6 +305,7 @@ table.fit tbody tr:hover td{background:#eef4ff}
 .slip .stbl td.lab{background:#f9f4c4;font-weight:800;text-align:center;width:23%;white-space:nowrap}
 .slip .stbl td.val{text-align:right;font-weight:700;width:27%}
 .slip .stbl td.nm{text-align:center;font-weight:800;font-size:15px}
+.slip .stbl td.dt{text-align:center;font-weight:600;font-size:12px;white-space:nowrap}
 .slip .stbl tr.tot td.lab{background:#f3ecac}
 .slip .stbl tr.tot td.val{background:#fbfae8;font-weight:800}
 /* 지급총액 — 한 줄 전체, 크게 강조 */
@@ -349,6 +350,7 @@ table.fit tbody tr:hover td{background:#eef4ff}
   .slip .sh{font-size:21px;padding:14px 8px}
   .slip .stbl td,.slip .ottbl td{padding:9px 13px}
   .slip .stbl td.nm{font-size:18px}
+  .slip .stbl td.dt{font-size:13px}
   .slip .stbl tr.grandrow td.glab{font-size:18px}
   .slip .stbl tr.grandrow td.gval{font-size:24px}
   /* 노란 배경도 인쇄되도록(‘배경 그래픽’ 체크 없이도) */
@@ -2242,7 +2244,7 @@ function slipCard(emp,c,y,mo,payDate){
   return `<div class="slip">
     <div class="sh">${y}년 ${mo}월분 급여명세표</div>
     <table class="stbl">
-      <tr><td class="lab">이 름</td><td class="nm">${esc(emp.name)||'-'}</td><td class="lab">지 급 일</td><td class="nm">${payDate||'-'}</td></tr>
+      <tr><td class="lab">이 름</td><td class="nm">${esc(emp.name)||'-'}</td><td class="lab">지 급 일</td><td class="dt">${payDate||'-'}</td></tr>
       ${body}
       <tr class="tot"><td class="lab">급 여 계</td><td class="val">${won(c.gross)}</td><td class="lab">공제합계</td><td class="val">${won(c.totDed)}</td></tr>
       <tr class="grandrow"><td class="glab" colspan="2">지 급 총 액</td><td class="gval" colspan="2">${won(c.net)} 원</td></tr>
