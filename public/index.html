@@ -324,12 +324,13 @@ table.fit tbody tr:hover td{background:#eef4ff}
 .legend .sw{width:11px;height:11px;border-radius:3px}
 
 @media print{
-  @page{ size:A4; margin:10mm; }
+  @page{ size:A4; margin:10mm; }                 /* 기본: 세로 (급여대장 등 다른 페이지) */
+  @page slipLand{ size:A4 landscape; margin:10mm; } /* 급여명세표 전용: 가로 */
   .side,.topbar,.no-print{display:none!important}
   .content{padding:0}
-  /* 급여명세표: A4 한 장에 2명을 좌우로 나란히 (각자 세로형) */
+  /* 급여명세표: A4(가로) 한 장에 2명을 좌우로 나란히 */
   .slips{display:block}
-  .slip-page{display:flex;gap:8mm;align-items:flex-start;
+  .slip-page{display:flex;gap:10mm;align-items:flex-start; page:slipLand;
     page-break-after:always;break-after:page;page-break-inside:avoid;break-inside:avoid}
   .slip-page:last-child{page-break-after:auto;break-after:auto}
   .slip{width:50%;box-sizing:border-box;page-break-inside:avoid;break-inside:avoid;border-color:#000}
